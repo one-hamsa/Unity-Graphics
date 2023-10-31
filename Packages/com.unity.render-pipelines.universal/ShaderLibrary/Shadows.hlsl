@@ -72,9 +72,9 @@ CBUFFER_START(LightShadows)
 // Last cascade is initialized with a no-op matrix. It always transforms
 // shadow coord to half3(0, 0, NEAR_PLANE). We use this trick to avoid
 // branching since ComputeCascadeIndex can return cascade index = MAX_SHADOW_CASCADES
-float4x4    _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
-float4      _CascadeShadowSplitSpheres0;
-float4      _CascadeShadowSplitSpheres1;
+half4x4    _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
+half4      _CascadeShadowSplitSpheres0;
+half4      _CascadeShadowSplitSpheres1;
 float4      _CascadeShadowSplitSpheres2;
 float4      _CascadeShadowSplitSpheres3;
 float4      _CascadeShadowSplitSphereRadii;
@@ -341,21 +341,19 @@ real SampleShadowmap(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float
     return lerp(attenuation, 1, step(shadowCoord.z, 0.0) + step(1.0, shadowCoord.z));
 }
 
-half ComputeCascadeIndex(float3 positionWS)
+half ComputeCascadeIndex(half3 positionWS)
 {
-    float3 fromCenter0 = positionWS - _CascadeShadowSplitSpheres0.xyz;
-    float3 fromCenter1 = positionWS - _CascadeShadowSplitSpheres1.xyz;
-    float3 fromCenter2 = positionWS - _CascadeShadowSplitSpheres2.xyz;
-    float3 fromCenter3 = positionWS - _CascadeShadowSplitSpheres3.xyz;
-    float4 distances2 = float4(dot(fromCenter0, fromCenter0), dot(fromCenter1, fromCenter1), dot(fromCenter2, fromCenter2), dot(fromCenter3, fromCenter3));
+    half3 fromCenter0 = positionWS - _CascadeShadowSplitSpheres0.xyz;
+    half3 fromCenter1 = positionWS - _CascadeShadowSplitSpheres1.xyz;
+    half2 distances2 = half2(dot(fromCenter0, fromCenter0), dot(fromCenter1, fromCenter1));
 
-    half4 weights = half4(distances2 < _CascadeShadowSplitSphereRadii);
-    weights.yzw = saturate(weights.yzw - weights.xyz);
+    half2 weights = half2(step(distances2.x,_CascadeShadowSplitSphereRadii.x),step(distances2.y,_CascadeShadowSplitSphereRadii.y));
+    weights.y = saturate(weights.y - weights.x);
 
-    return half(4.0) - dot(weights, half4(4, 3, 2, 1));
+    return half(4.0) - dot(weights, half2(4, 3));
 }
 
-float4 TransformWorldToShadowCoord(float3 positionWS)
+half4 TransformWorldToShadowCoord(half3 positionWS)
 {
 #if defined(_MAIN_LIGHT_SHADOWS_SCREEN) && !defined(_SURFACE_TYPE_TRANSPARENT)
     float4 shadowCoord = float4(ComputeNormalizedDeviceCoordinatesWithZ(positionWS, GetWorldToHClipMatrix()), 1.0);
