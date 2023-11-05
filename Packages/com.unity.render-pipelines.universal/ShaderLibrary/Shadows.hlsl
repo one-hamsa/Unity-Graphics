@@ -353,10 +353,10 @@ half ComputeCascadeIndex(half3 positionWS)
     return half(4.0) - dot(weights, half2(4, 3));
 }
 
-half4 TransformWorldToShadowCoord(half3 positionWS)
+half4 TransformWorldToShadowCoord(float3 positionWS)
 {
 #if defined(_MAIN_LIGHT_SHADOWS_SCREEN) && !defined(_SURFACE_TYPE_TRANSPARENT)
-    float4 shadowCoord = float4(ComputeNormalizedDeviceCoordinatesWithZ(positionWS, GetWorldToHClipMatrix()), 1.0);
+    half4 shadowCoord = half4(ComputeNormalizedDeviceCoordinatesWithZ(positionWS, GetWorldToHClipMatrix()), 1.0);
 #else
     #ifdef _MAIN_LIGHT_SHADOWS_CASCADE
         half cascadeIndex = ComputeCascadeIndex(positionWS);
@@ -364,7 +364,7 @@ half4 TransformWorldToShadowCoord(half3 positionWS)
         half cascadeIndex = half(0.0);
     #endif
 
-    float4 shadowCoord = float4(mul(_MainLightWorldToShadow[cascadeIndex], float4(positionWS, 1.0)).xyz, 0.0);
+    half4 shadowCoord = float4(mul(_MainLightWorldToShadow[cascadeIndex], float4(positionWS, 1.0)).xyz, 0.0);
 #endif
     return shadowCoord;
 }
