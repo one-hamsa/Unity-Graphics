@@ -1,16 +1,19 @@
 using System;
+using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NUnit.Framework;
-using UnityEngine.VFX;
-using UnityEditor.VFX;
 using UnityEngine;
+using UnityEngine.VFX;
+using UnityEditor.VFX.Block;
+using UnityEngine.TestTools;
+using System.Collections;
+using static UnityEditor.VFX.Block.CollisionBase;
 
 namespace UnityEditor.VFX.Test
 {
     [TestFixture]
-    public class VFXShaderGraphTest
+    public class VFXCodeGenerationTest
     {
         [OneTimeSetUp]
         public void Init()
@@ -184,6 +187,78 @@ namespace UnityEditor.VFX.Test
             }
             Assert.AreEqual(4, shaderCount);
             vfx.GetOrCreateGraph().SetCompilationMode(VFXCompilationMode.Runtime);
+        }
+        
+        [UnityTest]
+        public IEnumerator Combinatory_Position_Shape()
+        {
+            var vfxGraph = VFXTestCommon.CreateGraph_And_System();
+            var initialize = vfxGraph.children.OfType<VFXBasicInitialize>().First();
+
+            foreach (PositionBase.PositionMode positionMode in Enum.GetValues(typeof(PositionBase.PositionMode)))
+            foreach (PositionBase.SpawnMode spawnMode in Enum.GetValues(typeof(PositionBase.SpawnMode)))
+            foreach (PositionShapeBase.Type shape in Enum.GetValues(typeof(PositionShapeBase.Type)))
+            {
+                var positionShape = ScriptableObject.CreateInstance<PositionShape>();
+                positionShape.SetSettingValue("positionMode", positionMode);
+                positionShape.SetSettingValue("spawnMode", spawnMode);
+                positionShape.SetSettingValue("shape", shape);
+
+                //Cover maximum of written values
+                positionShape.SetSettingValue("compositionPosition", AttributeCompositionMode.Blend);
+                positionShape.SetSettingValue("compositionAxes", AttributeCompositionMode.Blend);
+                positionShape.SetSettingValue("compositionDirection", AttributeCompositionMode.Blend);
+                positionShape.SetSettingValue("applyOrientation", PositionBase.Orientation.Direction | PositionBase.Orientation.Axes);
+
+                initialize.AddChild(positionShape);
+            }
+
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(vfxGraph));
+            for (int i = 0; i < 4; ++i) //Wait a few frame in case of shader compilation error
+                yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Combinatory_Collision_Shape()
+        {
+            var vfxGraph = VFXTestCommon.CreateGraph_And_System();
+            var initialize = vfxGraph.children.OfType<VFXBasicInitialize>().First();
+
+            foreach (CollisionBase.Behavior behavior in new[] { CollisionBase.Behavior.Collision, CollisionBase.Behavior.Kill })
+            foreach (CollisionBase.Mode mode in Enum.GetValues(typeof(CollisionBase.Mode)))
+            foreach (CollisionBase.RadiusMode radiusMode in Enum.GetValues(typeof(CollisionBase.RadiusMode)))
+            foreach (CollisionShapeBase.Type shape in Enum.GetValues(typeof(CollisionShapeBase.Type)))
+            {
+                var collisionShape = ScriptableObject.CreateInstance<CollisionShape>();
+                collisionShape.SetSettingValue("behavior", behavior);
+                collisionShape.SetSettingValue("mode", mode);
+                collisionShape.SetSettingValue("radiusMode", radiusMode);
+                collisionShape.SetSettingValue("shape", shape);
+
+                //Cover maximum of written values
+                collisionShape.SetSettingValue("roughSurface", true);
+
+                initialize.AddChild(collisionShape);
+            }
+
+            foreach (CollisionBase.Behavior behavior in new[] { CollisionBase.Behavior.Collision, CollisionBase.Behavior.Kill })
+            foreach (CollisionBase.Mode mode in Enum.GetValues(typeof(CollisionBase.Mode)))
+            foreach (CollisionBase.RadiusMode radiusMode in Enum.GetValues(typeof(CollisionBase.RadiusMode)))
+            foreach (Type type in new[] { typeof(CollisionSDF), typeof(CollisionDepth) })
+            {
+                var collisionShape = ScriptableObject.CreateInstance<CollisionShape>();
+                collisionShape.SetSettingValue("behavior", behavior);
+                collisionShape.SetSettingValue("mode", mode);
+                collisionShape.SetSettingValue("radiusMode", radiusMode);
+
+                //Cover maximum of written values
+                collisionShape.SetSettingValue("roughSurface", true);
+                initialize.AddChild(collisionShape);
+            }
+
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(vfxGraph));
+            for (int i = 0; i < 4; ++i) //Wait a few frame in case of shader compilation error
+                yield return null;
         }
     }
 }

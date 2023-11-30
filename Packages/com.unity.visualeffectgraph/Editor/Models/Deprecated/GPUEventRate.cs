@@ -5,8 +5,6 @@ using UnityEngine.VFX;
 
 namespace UnityEditor.VFX.Block
 {
-    [VFXHelpURL("Block-TriggerEventRate")]
-    [VFXInfo(name = "Trigger Event Rate (OverTime)", category = "GPUEvent", experimental = true)]
     class GPUEventRate : VFXBlock
     {
         public enum Mode
@@ -20,6 +18,17 @@ namespace UnityEditor.VFX.Block
 
         [SerializeField, VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), Tooltip("True to allow one event max per frame")]
         protected bool clampToOne = true;
+
+        public override void Sanitize(int version)
+        {
+            base.Sanitize(version);
+            var newBlock = ScriptableObject.CreateInstance<TriggerEvent>();
+            newBlock.SetSettingValue("mode", mode == Mode.OverDistance ? TriggerEvent.Mode.OverDistance : TriggerEvent.Mode.OverTime);
+            newBlock.SetSettingValue("clampToOne", clampToOne);
+            VFXSlot.CopyLinksAndValue(newBlock.GetInputSlot(0), GetInputSlot(0));
+            VFXSlot.CopyLinksAndValue(newBlock.GetOutputSlot(0), GetOutputSlot(0));
+            ReplaceModel(newBlock, this);
+        }
 
         public override string name { get { return string.Format("Trigger Event Rate ({0})", ObjectNames.NicifyVariableName(mode.ToString())); } }
         public override VFXContextType compatibleContexts { get { return VFXContextType.Update; } }

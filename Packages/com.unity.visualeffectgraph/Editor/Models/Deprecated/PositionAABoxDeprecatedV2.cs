@@ -6,23 +6,7 @@ using UnityEngine.VFX;
 
 namespace UnityEditor.VFX.Block
 {
-    class PositionAABoxProvider : VariantProvider
-    {
-        public override IEnumerable<Variant> GetVariants()
-        {
-            yield return new Variant(
-                VFXBlockUtility.GetNameString(AttributeCompositionMode.Overwrite) + " Position (Shape: AABox)",
-                "Position/Position on shape",
-                typeof(PositionAABox),
-                new[] {new KeyValuePair<string, object>("compositionPosition", AttributeCompositionMode.Overwrite)},
-                null,
-                new []{ "bounding", "axis", "aligned"});
-        }
-    }
-
-    [VFXHelpURL("Block-SetPosition(AABox)")]
-    [VFXInfo(variantProvider = typeof(PositionAABoxProvider))]
-    class PositionAABox : PositionBase
+    class PositionAABoxDeprecatedV2 : PositionBase
     {
         public override string name { get { return string.Format(base.name, "AABox"); } }
 
@@ -198,7 +182,10 @@ float3 outPos = cube * 0.5f;
                 // SANITIZE : if older version, ensure position composition is overwrite.
                 compositionPosition = AttributeCompositionMode.Overwrite;
             }
-            base.Sanitize(version);
+
+            var newPositionShape = ScriptableObject.CreateInstance<PositionShape>();
+            SanitizeHelper.MigrateBlockPositionToComposed(GetGraph(), GetParent().position, newPositionShape, this, PositionShapeBase.Type.OrientedBox);
+            ReplaceModel(newPositionShape, this);
         }
     }
 }

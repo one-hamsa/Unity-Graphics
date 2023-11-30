@@ -3,9 +3,7 @@ using UnityEngine;
 
 namespace UnityEditor.VFX.Block
 {
-    [VFXHelpURL("Block-Kill(AABox)")]
-    [VFXInfo(name = "Kill (AABox)", category = "Kill")]
-    class KillAABox : VFXBlock
+    class KillAABoxDeprecatedV2 : VFXBlock
     {
         [VFXSetting]
         [Tooltip("Specifies the mode by which particles are killed off. ‘Solid’ affects only particles within the specified volume, while ‘Inverted’ affects only particles outside of the volume.")]
@@ -20,6 +18,14 @@ namespace UnityEditor.VFX.Block
         {
             [Tooltip("Sets the center and size of the axis-aligned box used to determine the kill volume.")]
             public AABox box = new AABox() { size = Vector3.one };
+        }
+
+        public override void Sanitize(int version)
+        {
+            var newKillShape = ScriptableObject.CreateInstance<CollisionShape>();
+            newKillShape.SetSettingValue("behavior", CollisionBase.Behavior.Kill);
+            SanitizeHelper.MigrateBlockCollisionShapeToComposed(newKillShape, this, CollisionShapeBase.Type.OrientedBox);
+            ReplaceModel(newKillShape, this);
         }
 
         public override IEnumerable<VFXAttributeInfo> attributes

@@ -1,12 +1,9 @@
 using System.Collections.Generic;
-
 using UnityEngine;
 
 namespace UnityEditor.VFX.Block
 {
-    [VFXHelpURL("Block-Kill(Sphere)")]
-    [VFXInfo(name = "Kill (Sphere)", category = "Kill")]
-    class KillSphere : VFXBlock
+    class KillSphereDeprecatedV2 : VFXBlock
     {
         [VFXSetting]
         [Tooltip("Specifies the mode by which particles are killed off. ‘Solid’ affects only particles within the specified volume, while ‘Inverted’ affects only particles outside of the volume.")]
@@ -16,6 +13,14 @@ namespace UnityEditor.VFX.Block
 
         public override VFXContextType compatibleContexts { get { return VFXContextType.InitAndUpdateAndOutput; } }
         public override VFXDataType compatibleData { get { return VFXDataType.Particle; } }
+
+        public override void Sanitize(int version)
+        {
+            var newKillSphereShape = ScriptableObject.CreateInstance<CollisionShape>();
+            newKillSphereShape.SetSettingValue("behavior", CollisionBase.Behavior.Kill);
+            SanitizeHelper.MigrateBlockCollisionShapeToComposed(newKillSphereShape, this, CollisionShapeBase.Type.Sphere);
+            ReplaceModel(newKillSphereShape, this);
+        }
 
         public override IEnumerable<VFXAttributeInfo> attributes
         {

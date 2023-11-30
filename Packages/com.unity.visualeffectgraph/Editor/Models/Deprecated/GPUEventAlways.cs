@@ -1,14 +1,21 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace UnityEditor.VFX.Block
 {
-    [VFXHelpURL("Block-TriggerEventOnDie")]
-    [VFXInfo(name = "Trigger Event On Die", category = "GPUEvent", experimental = true)]
-    class GPUEventOnDie : VFXBlock
+    class GPUEventAlways : VFXBlock
     {
-        public override string name { get { return "Trigger Event On Die"; } }
+        public override void Sanitize(int version)
+        {
+            base.Sanitize(version);
+            var newBlock = ScriptableObject.CreateInstance<TriggerEvent>();
+            newBlock.SetSettingValue("mode", TriggerEvent.Mode.Always);
+            VFXSlot.CopyLinksAndValue(newBlock.GetInputSlot(0), GetInputSlot(0));
+            VFXSlot.CopyLinksAndValue(newBlock.GetOutputSlot(0), GetOutputSlot(0));
+            ReplaceModel(newBlock, this);
+        }
+
+        public override string name { get { return "Trigger Event Always"; } }
         public override VFXContextType compatibleContexts { get { return VFXContextType.Update; } }
         public override VFXDataType compatibleData { get { return VFXDataType.Particle; } }
 
@@ -16,22 +23,9 @@ namespace UnityEditor.VFX.Block
         {
             get
             {
-                yield return new VFXAttributeInfo(VFXAttribute.Lifetime, VFXAttributeMode.Read);
-                yield return new VFXAttributeInfo(VFXAttribute.Age, VFXAttributeMode.Read);
-                yield return new VFXAttributeInfo(VFXAttribute.Alive, VFXAttributeMode.Read);
                 yield return new VFXAttributeInfo(VFXAttribute.EventCount, VFXAttributeMode.Write);
             }
         }
-        public override IEnumerable<VFXNamedExpression> parameters
-        {
-            get
-            {
-                foreach (var param in base.parameters)
-                    yield return param;
-                yield return new VFXNamedExpression(VFXBuiltInExpression.DeltaTime, "deltaTime");
-            }
-        }
-
 
         public class InputProperties
         {
@@ -49,7 +43,7 @@ namespace UnityEditor.VFX.Block
         {
             get
             {
-                return "eventCount = (age + deltaTime > lifetime || !alive) ? count : 0;";
+                return "eventCount = count;";
             }
         }
     }
