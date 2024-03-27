@@ -1,7 +1,1 @@
-hdrp:
-  when:
-    path:
-      - ^.*HDROutput?.*$
-      - ^.*LensFlare?.*$
-  add:
-    area: HD RP
+area: Post-processing and UI Features
