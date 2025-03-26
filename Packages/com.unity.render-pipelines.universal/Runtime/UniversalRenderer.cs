@@ -1054,7 +1054,7 @@ namespace UnityEngine.Rendering.Universal
 #endif
 
 #if !UNITY_EDITOR
-            if (cameraData.xr.motionVectorRenderTargetValid)
+            if (cameraData.xr.motionVectorRenderTargetValid && cameraData.xrRendering)
             {
                 RenderTargetHandle motionVecHandle = new RenderTargetHandle(cameraData.xr.motionVectorRenderTarget);
                 var rtMotionId = motionVecHandle.Identifier();
