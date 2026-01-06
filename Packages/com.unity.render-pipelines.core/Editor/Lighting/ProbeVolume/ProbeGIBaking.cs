@@ -77,7 +77,7 @@ namespace UnityEngine.Rendering
 
         public void Clear()
         {
-            UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(index, null);
+            // UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(index, null);
             cells.Clear();
             cellIndex2SceneReferences.Clear();
         }
@@ -750,7 +750,6 @@ namespace UnityEngine.Rendering
 
             using var scope = new BakingCompleteProfiling(BakingCompleteProfiling.Stages.FinalizingBake);
 
-            UnityEditor.Experimental.Lightmapping.additionalBakedProbesCompleted -= OnAdditionalProbesBakeCompleted;
             s_ForceInvalidatedProbesAndTouchupVols.Clear();
             s_CustomDilationThresh.Clear();
 
@@ -767,7 +766,7 @@ namespace UnityEngine.Rendering
             if (numUniqueProbes != 0)
             {
                 var bakedProbeOctahedralDepth = new NativeArray<float>(numUniqueProbes * 64, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-                bool validBakedProbes = UnityEditor.Experimental.Lightmapping.GetAdditionalBakedProbes(m_BakingBatch.index, sh, validity, bakedProbeOctahedralDepth);
+                bool validBakedProbes = true;
                 bakedProbeOctahedralDepth.Dispose();
 
                 if (!validBakedProbes)
@@ -990,7 +989,7 @@ namespace UnityEngine.Rendering
             m_BakingBatchIndex = 0;
 
             // Reset index
-            UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(m_BakingBatch.index, null);
+
 
             // Extract baking cell if we are baking only active scene.
             if (isBakingSceneSubset)
@@ -1741,9 +1740,6 @@ namespace UnityEngine.Rendering
                 else
                 {
                     // Dequeue the call if something has failed.
-                    UnityEditor.Experimental.Lightmapping.additionalBakedProbesCompleted -= OnAdditionalProbesBakeCompleted;
-                    if (m_BakingBatch != null)
-                        UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(m_BakingBatch.index, null);
 
                     RestorePhysicsComponentsAfterBaking();
                     CleanupOccluders();
@@ -1760,7 +1756,6 @@ namespace UnityEngine.Rendering
 
         public static void RunPlacement()
         {
-            UnityEditor.Experimental.Lightmapping.additionalBakedProbesCompleted += OnAdditionalProbesBakeCompleted;
             ProbeReferenceVolume.instance.checksDuringBakeAction = CheckPVChanges;
             AdditionalGIBakeRequestsManager.instance.AddRequestsToLightmapper();
             Lightmapping.bakeCompleted += OnBakeCompletedCleanup;
@@ -1988,8 +1983,6 @@ namespace UnityEngine.Rendering
             // Virtually offset positions before passing them to lightmapper
             using (new BakingSetupProfiling(BakingSetupProfiling.Stages.ApplyVirtualOffsets))
                 ApplyVirtualOffsets(positions, out m_BakingBatch.virtualOffsets);
-
-            UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(m_BakingBatch.index, positions);
         }
     }
 }

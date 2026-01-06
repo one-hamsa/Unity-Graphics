@@ -56,8 +56,6 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
         [SerializeField]
         DecalData m_DecalData;
-
-        [SerializeField]
         private DecalData decalData
         {
             get

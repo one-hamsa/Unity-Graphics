@@ -123,7 +123,7 @@ namespace UnityEngine.Rendering
 
         internal void AddRequestsToLightmapper()
         {
-            UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(s_BakingID, (new List<Vector3>(m_RequestPositions.Values)).ToArray());
+            // UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(s_BakingID, (new List<Vector3>(m_RequestPositions.Values)).ToArray());
 
             Lightmapping.bakeCompleted -= OnAdditionalProbesBakeCompleted;
             Lightmapping.bakeCompleted += OnAdditionalProbesBakeCompleted;
@@ -131,7 +131,7 @@ namespace UnityEngine.Rendering
 
         private void RemoveRequestsFromLightmapper()
         {
-            UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(s_BakingID, null);
+            // UnityEditor.Experimental.Lightmapping.SetAdditionalBakedProbes(s_BakingID, null);
         }
 
         private void OnAdditionalProbesBakeCompleted()
@@ -144,15 +144,15 @@ namespace UnityEngine.Rendering
             var validity = new NativeArray<float>(m_RequestPositions.Count, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
             var bakedProbeOctahedralDepth = new NativeArray<float>(m_RequestPositions.Count * 64, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
-            if (UnityEditor.Experimental.Lightmapping.GetAdditionalBakedProbes(s_BakingID, sh, validity, bakedProbeOctahedralDepth))
-            {
-                SetSHCoefficients(sh, validity);
-            }
-            else
-            {
-                Debug.LogWarning($"Failed to collect results for additional probes. (Bake Id {s_BakingID})");
-                ClearSHCoefficients();
-            }
+            // if (UnityEditor.Experimental.Lightmapping.GetAdditionalBakedProbes(s_BakingID, sh, validity, bakedProbeOctahedralDepth))
+            // {
+            //     SetSHCoefficients(sh, validity);
+            // }
+            // else
+            // {
+            //     Debug.LogWarning($"Failed to collect results for additional probes. (Bake Id {s_BakingID})");
+            //     ClearSHCoefficients();
+            // }
 
             ProbeReferenceVolume.instance.retrieveExtraDataAction?.Invoke(new ProbeReferenceVolume.ExtraDataActionInput());
 

@@ -33,7 +33,7 @@ namespace UnityEditor.Rendering
 
         internal static void APVDisabledHelpBox()
         {
-            var renderPipelineAsset = GraphicsSettings.renderPipelineAsset;
+            var renderPipelineAsset = GraphicsSettings.defaultRenderPipeline;
 
             // HDRP
             if (renderPipelineAsset != null && renderPipelineAsset.GetType().Name == "HDRenderPipelineAsset")

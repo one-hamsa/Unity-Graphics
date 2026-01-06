@@ -453,7 +453,7 @@ namespace UnityEditor.VFX
         {
             get
             {
-                return VFXExpressionOperation.Vector3sToMatrix;
+                return VFXExpressionOperation.TransformVec;
             }
         }
 
@@ -499,7 +499,7 @@ namespace UnityEditor.VFX
         {
             get
             {
-                return VFXExpressionOperation.Vector4sToMatrix;
+                return VFXExpressionOperation.Abs;
             }
         }
 
@@ -545,7 +545,7 @@ namespace UnityEditor.VFX
         {
             get
             {
-                return VFXExpressionOperation.MatrixToVector3s;
+                return VFXExpressionOperation.TransformDir;
             }
         }
 
@@ -581,7 +581,7 @@ namespace UnityEditor.VFX
         {
             get
             {
-                return VFXExpressionOperation.MatrixToVector4s;
+                return VFXExpressionOperation.InverseMatrix;
             }
         }
 

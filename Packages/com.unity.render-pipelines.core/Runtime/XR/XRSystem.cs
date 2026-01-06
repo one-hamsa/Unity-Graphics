@@ -125,7 +125,7 @@ namespace UnityEngine.Experimental.Rendering
             s_MSAASamples = msaaSamples;
 
 #if ENABLE_VR && ENABLE_XR_MODULE
-            SubsystemManager.GetInstances(s_DisplayList);
+            SubsystemManager.GetSubsystems(s_DisplayList);
 
             foreach (var display in s_DisplayList)
                 display.SetMSAALevel((int)s_MSAASamples);
@@ -148,7 +148,7 @@ namespace UnityEngine.Experimental.Rendering
         public static void SetRenderScale(float renderScale)
         {
 #if ENABLE_VR && ENABLE_XR_MODULE
-            SubsystemManager.GetInstances(s_DisplayList);
+            SubsystemManager.GetSubsystems(s_DisplayList);
 
             foreach (var display in s_DisplayList)
                 display.scaleOfAllRenderTargets = renderScale;
@@ -244,7 +244,7 @@ namespace UnityEngine.Experimental.Rendering
         static void RefreshDeviceInfo()
         {
 #if ENABLE_VR && ENABLE_XR_MODULE
-            SubsystemManager.GetInstances(s_DisplayList);
+            SubsystemManager.GetSubsystems(s_DisplayList);
 
             if (s_DisplayList.Count > 0)
             {

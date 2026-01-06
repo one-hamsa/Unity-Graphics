@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -152,7 +152,7 @@ namespace UnityEditor.VFX
             });
             return new VFXGPUBufferDesc()
             {
-                type = ComputeBufferType.Raw,
+                // type = ComputeBufferType.Raw,
                 size = GetBufferSize(capacity),
                 stride = 4,
                 capacity = capacity,
@@ -707,7 +707,7 @@ namespace UnityEditor.VFX
 
                 attributeSourceBufferIndex = dependentBuffers.attributeBuffers[dependency];
                 eventGPUFrom = dependentBuffers.eventBuffers[this];
-               
+
                 systemValueMappings.Add(new VFXMapping("parentSystemIndex", (int)dataToSystemIndex[dependency]));
             }
             var systemFlag = VFXSystemFlag.SystemDefault;
@@ -718,7 +718,7 @@ namespace UnityEditor.VFX
             }
 
             contextDataBufferIndex = outBufferDescs.Count;
-            outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 8 });
+            // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 8 });
             systemBufferMappings.Add(new VFXMapping("instancingContextData", contextDataBufferIndex));
 
             if (m_ownAttributeSourceBuffer)
@@ -749,17 +749,17 @@ namespace UnityEditor.VFX
 
                 if (!hasStrip) // No dead list for strips
                 {
-                    deadListBufferIndex = outBufferDescs.Count;
-                    outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity, stride = 4 });
-                    systemBufferMappings.Add(new VFXMapping("deadList", deadListBufferIndex));
-
-                    deadListCountIndex = outBufferDescs.Count;
-                    outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
-                    systemBufferMappings.Add(new VFXMapping("deadListCount", deadListCountIndex));
-
-                    deadListCountCopyIndex = outBufferDescs.Count;
-                    outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
-                    systemBufferMappings.Add(new VFXMapping("deadListCountCopy", deadListCountCopyIndex));
+                    // deadListBufferIndex = outBufferDescs.Count;
+                    // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity, stride = 4 });
+                    // systemBufferMappings.Add(new VFXMapping("deadList", deadListBufferIndex));
+                    //
+                    // deadListCountIndex = outBufferDescs.Count;
+                    // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
+                    // systemBufferMappings.Add(new VFXMapping("deadListCount", deadListCountIndex));
+                    //
+                    // deadListCountCopyIndex = outBufferDescs.Count;
+                    // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
+                    // systemBufferMappings.Add(new VFXMapping("deadListCountCopy", deadListCountCopyIndex));
                 }
             }
 
@@ -778,13 +778,13 @@ namespace UnityEditor.VFX
             if (hasInstancing)
             {
                 // for custom instancing indirect, like rendering one particular instance of the batch
-                instancingIndirectBufferIndex = outBufferDescs.Count;
-                outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
-                systemBufferMappings.Add(new VFXMapping("instancingIndirect", instancingIndirectBufferIndex));
-
-                instancingActiveIndirectBufferIndex = outBufferDescs.Count;
-                outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
-                systemBufferMappings.Add(new VFXMapping("instancingActiveIndirect", instancingActiveIndirectBufferIndex));
+                // instancingIndirectBufferIndex = outBufferDescs.Count;
+                // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
+                // systemBufferMappings.Add(new VFXMapping("instancingIndirect", instancingIndirectBufferIndex));
+                //
+                // instancingActiveIndirectBufferIndex = outBufferDescs.Count;
+                // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = 1, stride = 4 });
+                // systemBufferMappings.Add(new VFXMapping("instancingActiveIndirect", instancingActiveIndirectBufferIndex));
             }
 
             if (hasDynamicSourceCount)
@@ -864,7 +864,7 @@ namespace UnityEditor.VFX
                 {
                     globalIndirectBufferIndex = outBufferDescs.Count;
                     systemBufferMappings.Add(new VFXMapping("indirectBuffer0", outBufferDescs.Count));
-                    outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity + 1, stride = 4 });
+                    // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity + 1, stride = 4 });
                 }
 
                 int currentIndirectBufferIndex = globalIndirectBufferIndex == -1 ? 0 : 1;
@@ -883,14 +883,14 @@ namespace UnityEditor.VFX
                             if (perCamera)
                                 bufferName += "PerCamera";
                             systemBufferMappings.Add(new VFXMapping(bufferName, outBufferDescs.Count));
-                            outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity + 1, stride = bufferStride });
+                            // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity + 1, stride = bufferStride });
                         }
 
                         if (culler.HasFeature(VFXOutputUpdate.Features.Sort))
                         {
                             culler.sortedBufferIndex = outBufferDescs.Count;
-                            for (uint i = 0; i < bufferCount; ++i)
-                                outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 4 });
+                            // for (uint i = 0; i < bufferCount; ++i)
+                            //     outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 4 });
                         }
                         else
                             culler.sortedBufferIndex = culler.bufferIndex;
@@ -925,11 +925,11 @@ namespace UnityEditor.VFX
                 sortBufferAIndex = outBufferDescs.Count;
                 sortBufferBIndex = sortBufferAIndex + 1;
 
-                outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 8 });
-                systemBufferMappings.Add(new VFXMapping("sortBufferA", sortBufferAIndex));
-
-                outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 8 });
-                systemBufferMappings.Add(new VFXMapping("sortBufferB", sortBufferBIndex));
+                // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 8 });
+                // systemBufferMappings.Add(new VFXMapping("sortBufferA", sortBufferAIndex));
+                //
+                // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 8 });
+                // systemBufferMappings.Add(new VFXMapping("sortBufferB", sortBufferBIndex));
             }
 
             var elementToVFXBufferMotionVector = new Dictionary<VFXContext, int>();
@@ -946,7 +946,7 @@ namespace UnityEditor.VFX
                     // add previous frame index
                     sizePerElement += 4U;
                     int currentElementToVFXBufferMotionVector = outTemporaryBufferDescs.Count;
-                    outTemporaryBufferDescs.Add(new VFXTemporaryGPUBufferDesc() { frameCount = 2u, desc = new VFXGPUBufferDesc { type = ComputeBufferType.Raw, size = capacity * sizePerElement, stride = 4 } });
+                    // outTemporaryBufferDescs.Add(new VFXTemporaryGPUBufferDesc() { frameCount = 2u, desc = new VFXGPUBufferDesc { type = ComputeBufferType.Raw, size = capacity * sizePerElement, stride = 4 } });
                     elementToVFXBufferMotionVector.Add(context.output, currentElementToVFXBufferMotionVector);
                 }
             }
@@ -1183,7 +1183,7 @@ namespace UnityEditor.VFX
                         {
                             VFXEditorTaskDesc sortTaskDesc = new VFXEditorTaskDesc();
                             sortTaskDesc.type = UnityEngine.VFX.VFXTaskType.PerOutputSort;
-                            sortTaskDesc.externalProcessor = null;
+                            // sortTaskDesc.externalProcessor = null;
                             sortTaskDesc.model = context;
 
                             sortTaskDesc.buffers = new VFXMapping[3];
@@ -1191,7 +1191,7 @@ namespace UnityEditor.VFX
                             if (capacity > 4096) // Add scratch buffer
                             {
                                 sortTaskDesc.buffers[1] = new VFXMapping("scratchBuffer", outBufferDescs.Count);
-                                outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 8 });
+                                // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = capacity + 1, stride = 8 });
                             }
                             else
                                 sortTaskDesc.buffers[1] = new VFXMapping("scratchBuffer", -1); // No scratchBuffer needed
@@ -1238,7 +1238,7 @@ namespace UnityEditor.VFX
             graphValuesIndex = outBufferDescs.Count;
             outBufferDescs.Add(new VFXGPUBufferDesc()
             {
-                type = ComputeBufferType.Raw, size = graphValuesSize, stride = 4u
+                // type = ComputeBufferType.Raw, size = graphValuesSize, stride = 4u
             });
             systemBufferMappings.Add(new VFXMapping("graphValuesBuffer", graphValuesIndex));
         }
@@ -1248,7 +1248,7 @@ namespace UnityEditor.VFX
         {
             uint initParamsStride = 16u;
             batchedInitParamsIndex = outBufferDescs.Count;
-            outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 1u, stride = initParamsStride });
+            // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 1u, stride = initParamsStride });
             systemBufferMappings.Add(new VFXMapping("batchedInitParams", batchedInitParamsIndex));
         }
         private static void FillPrefixSumBuffers(List<VFXGPUBufferDesc> outBufferDescs, List<VFXMapping> systemBufferMappings, uint staticSourceCount,
@@ -1257,16 +1257,16 @@ namespace UnityEditor.VFX
             out int spawnCountPrefixSumBufferIndex)
         {
             instancesPrefixSumBufferIndex = outBufferDescs.Count;
-            outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 1u, stride = 4 });
+            // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 1u, stride = 4 });
             systemBufferMappings.Add(new VFXMapping("instancingPrefixSum", instancesPrefixSumBufferIndex));
 
             eventsPrefixSumBufferIndex = outBufferDescs.Count;
-            outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 1u, stride = 4 });
+            // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 1u, stride = 4 });
             systemBufferMappings.Add(new VFXMapping("eventCountPrefixSum", eventsPrefixSumBufferIndex));
 
             spawnCountPrefixSumBufferIndex = outBufferDescs.Count;
             uint spawnCountSize = Math.Max(staticSourceCount, 1u);
-            outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = spawnCountSize, stride = 4 });
+            // outBufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = spawnCountSize, stride = 4 });
             systemBufferMappings.Add(new VFXMapping("spawnCountPrefixSum", spawnCountPrefixSumBufferIndex));
         }
 

@@ -27,15 +27,11 @@ namespace UnityEditor.ShaderGraph
             get
             {
                 var names = validSpaces.Select(cs => cs.ToString().PascalToLabel()).ToArray();
-                return new PopupList(names, (int)m_Space);
+                return null;
             }
             set
             {
-                if (m_Space == (CoordinateSpace)value.selectedEntry)
-                    return;
 
-                m_Space = (CoordinateSpace)value.selectedEntry;
-                Dirty(ModificationScope.Graph);
             }
         }
         public CoordinateSpace space => m_Space;

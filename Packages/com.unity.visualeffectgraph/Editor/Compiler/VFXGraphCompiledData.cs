@@ -48,7 +48,7 @@ namespace UnityEditor.VFX
         // 4: Bounds helper change
         // 5: HasAttributeBuffer flag
         // 6: needsComputeBounds needs Sanitization
-        // 7: changes in data serialization and additional mappings added to runtime data (graphValueOffset and parentSystemIndex) 
+        // 7: changes in data serialization and additional mappings added to runtime data (graphValueOffset and parentSystemIndex)
         public const uint compiledVersion = 7;
 
         public VFXGraphCompiledData(VFXGraph graph)
@@ -69,7 +69,7 @@ namespace UnityEditor.VFX
         private static VFXExpressionObjectValueContainerDesc<T> CreateObjectValueDesc<T>(VFXExpression exp, int expIndex)
         {
             var desc = new VFXExpressionObjectValueContainerDesc<T>();
-            desc.instanceID = exp.Get<int>();
+            // desc.instanceID = exp.Get<int>();
             return desc;
         }
 
@@ -87,7 +87,7 @@ namespace UnityEditor.VFX
 
         private void SetObjectValueDesc<T>(VFXExpressionValueContainerDesc desc, VFXExpression exp)
         {
-            ((VFXExpressionObjectValueContainerDesc<T>)desc).instanceID = exp.Get<int>();
+            // ((VFXExpressionObjectValueContainerDesc<T>)desc).instanceID = exp.Get<int>();
         }
 
         public uint FindReducedExpressionIndexFromSlotCPU(VFXSlot slot)
@@ -542,7 +542,7 @@ namespace UnityEditor.VFX
                         buffers = new VFXMapping[0],
                         values = mappingPreProcess,
                         parameters = contextData.parameters,
-                        externalProcessor = null
+                        // externalProcessor = null
                     };
                     taskDescList.Add(preProcessTask);
                 }
@@ -557,7 +557,7 @@ namespace UnityEditor.VFX
                     buffers = new VFXMapping[0],
                     values = GetSortedUniformValues(mappingList),
                     parameters = contextData.parameters,
-                    externalProcessor = processor
+                    // externalProcessor = processor
                 });
                 index++;
             }
@@ -894,7 +894,7 @@ namespace UnityEditor.VFX
                 {
                     stripBufferIndex = bufferDescs.Count;
                     uint stripCapacity = (uint)data.GetSettingValue("stripCapacity");
-                    bufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = stripCapacity * 5, stride = 4 });
+                    // bufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = stripCapacity * 5, stride = 4 });
                 }
                 buffers.stripBuffers.Add(data, stripBufferIndex);
 
@@ -902,7 +902,7 @@ namespace UnityEditor.VFX
                 if (data.NeedsComputeBounds())
                 {
                     boundsBufferIndex = bufferDescs.Count;
-                    bufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 6, stride = 4 });
+                    // bufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Default, size = 6, stride = 4 });
                 }
                 buffers.boundsBuffers.Add(data, boundsBufferIndex);
             }
@@ -915,7 +915,7 @@ namespace UnityEditor.VFX
                 if (capacity > 0)
                 {
                     eventBufferIndex = bufferDescs.Count;
-                    bufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity + 2, stride = 4 });
+                    // bufferDescs.Add(new VFXGPUBufferDesc() { type = ComputeBufferType.Structured, size = capacity + 2, stride = 4 });
                 }
                 buffers.eventBuffers.Add(data, eventBufferIndex);
             }
@@ -1213,7 +1213,7 @@ namespace UnityEditor.VFX
                 expressionSheet.expressions = expressionDescs.ToArray();
                 expressionSheet.expressionsPerSpawnEventAttribute = expressionPerSpawnEventAttributesDescs.ToArray();
                 expressionSheet.values = valueDescs.OrderBy(o => o.expressionIndex).ToArray();
-                expressionSheet.exposed = exposedParameterDescs.OrderBy(o => o.name).ToArray();
+                // expressionSheet.exposed = exposedParameterDescs.OrderBy(o => o.name).ToArray();
 
                 var vfxEventDesc = eventDescs.Select(e =>
                 {
@@ -1231,7 +1231,7 @@ namespace UnityEditor.VFX
 
                 VFXInstancingDisabledReason instancingDisabledReason = ValidateInstancing(compilableContexts, expressionSheet);
 
-                resource.SetRuntimeData(expressionSheet, systemDescs.ToArray(), vfxEventDesc, bufferDescs.ToArray(), cpuBufferDescs.ToArray(), temporaryBufferDescs.ToArray(), shaderSources, shadowCastingMode, motionVectorGenerationMode, instancingDisabledReason, compiledVersion);
+                // resource.SetRuntimeData(expressionSheet, systemDescs.ToArray(), vfxEventDesc, bufferDescs.ToArray(), cpuBufferDescs.ToArray(), temporaryBufferDescs.ToArray(), shaderSources, shadowCastingMode, motionVectorGenerationMode, instancingDisabledReason, compiledVersion);
                 m_ExpressionValues = expressionSheet.values;
 
                 foreach (var dep in sourceDependencies)
@@ -1305,7 +1305,7 @@ namespace UnityEditor.VFX
                 }
             }
 
-            m_Graph.visualEffectResource.SetValueSheet(m_ExpressionValues);
+            // m_Graph.visualEffectResource.SetValueSheet(m_ExpressionValues);
         }
 
         public VFXInstancingDisabledReason ValidateInstancing(IEnumerable<VFXContext> compilableContexts, VFXExpressionSheet expressionSheet)

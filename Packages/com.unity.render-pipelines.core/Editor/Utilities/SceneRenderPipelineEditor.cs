@@ -14,7 +14,7 @@ namespace UnityEditor.Rendering
         
             var rpAssetProperty = serializedObject.FindProperty("renderPipelineAsset");
             var rpAssetField = new PropertyField(rpAssetProperty);
-            rpAssetField.RegisterValueChangeCallback(evt => GraphicsSettings.renderPipelineAsset = rpAssetProperty.objectReferenceValue as RenderPipelineAsset);
+            rpAssetField.RegisterValueChangeCallback(evt => GraphicsSettings.defaultRenderPipeline = rpAssetProperty.objectReferenceValue as RenderPipelineAsset);
             root.Add(rpAssetField);
             return root;
         }
