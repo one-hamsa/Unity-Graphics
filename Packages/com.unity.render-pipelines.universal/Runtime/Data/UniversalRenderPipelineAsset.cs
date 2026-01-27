@@ -1417,6 +1417,8 @@ namespace UnityEngine.Rendering.Universal
 
         internal bool ShouldUseReflectionProbeBlending()
         {
+            return false;
+
             // The probe blending with atlas code path is always force enabled with GPUResidentDrawer since that is the only path supported here.
             if (gpuResidentDrawerMode != GPUResidentDrawerMode.Disabled)
                 return true;
@@ -1444,6 +1446,8 @@ namespace UnityEngine.Rendering.Universal
 
         internal bool ShouldUseReflectionProbeAtlasBlending(RenderingMode renderingMode)
         {
+            return false;
+            
             var useProbeBlending = ShouldUseReflectionProbeBlending();
 
             // The probe blending with atlas code path is always force enabled with GPUResidentDrawer since that is the only path supported here.
@@ -1916,7 +1920,7 @@ namespace UnityEngine.Rendering.Universal
                 k_AssetPreviousVersion = k_AssetVersion;
                 k_AssetVersion = 12;
             }
-            
+
             if (k_AssetVersion < 13)
             {
                 k_AssetPreviousVersion = k_AssetVersion;
@@ -1986,7 +1990,7 @@ namespace UnityEngine.Rendering.Universal
 #pragma warning restore CS0618 // Type or member is obsolete
                 asset.k_AssetPreviousVersion = 12;
             }
-            
+
             if (asset.k_AssetPreviousVersion < 13)
             {
                 asset.k_AssetPreviousVersion = 13;
