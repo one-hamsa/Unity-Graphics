@@ -79,7 +79,7 @@ namespace UnityEngine.Rendering.Universal
 
             // XRTODO: Extend RenderQueueRange.all to support transparent objects?
             // URP current' doesn't support this, missing motion override for transparent materials.
-            var filteringSettings = new FilteringSettings(RenderQueueRange.opaque, camera.cullingMask);
+            var filteringSettings = new FilteringSettings(RenderQueueRange.all, camera.cullingMask);
             // Also render game objects that are not moved since last frame to save depth prepass requirement for camera motion.
             filteringSettings.forceAllMotionVectorObjects = true;
             var renderStateBlock = new RenderStateBlock(RenderStateMask.Nothing);
