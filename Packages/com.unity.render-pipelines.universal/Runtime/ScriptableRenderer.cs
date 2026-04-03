@@ -1678,9 +1678,9 @@ namespace UnityEngine.Rendering.Universal
                     activeRenderPassQueue.RemoveAt(i);
             }
 
-            // if any pass was injected, the "automatic" store optimization policy will disable the optimized load actions
-            if (count > 0 && m_StoreActionsOptimizationSetting == StoreActionsOptimization.Auto)
-                m_UseOptimizedStoreActions = false;
+            // // if any pass was injected, the "automatic" store optimization policy will disable the optimized load actions
+            // if (count > 0 && m_StoreActionsOptimizationSetting == StoreActionsOptimization.Auto)
+            //      m_UseOptimizedStoreActions = false;
         }
 
 #if URP_COMPATIBILITY_MODE
