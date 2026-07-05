@@ -58,11 +58,22 @@ Varyings vert(Attributes input)
     return output;
 }
 
+// Editor debug tint (UNDERDOGS OculusMotionVectorsEditorDebug tool). The keyword is a
+// shader_feature no material ever enables, so the debug variant is stripped from builds
+// and the regular variant compiles this block out entirely; the tool enables the keyword
+// globally and sets a per-renderer color while drawing its coverage view.
+#ifdef _ASW_DEBUG_COVERAGE
+float4 _ASWDebugCoverageColor;
+#endif
+
 half4 frag(Varyings i) : SV_Target
 {
     float3 screenPos = i.curPositionCS.xyz / i.curPositionCS.w;
     float3 screenPosPrev = i.prevPositionCS.xyz / i.prevPositionCS.w;
     half4 color = (1);
     color.xyz = screenPos - screenPosPrev;
+#ifdef _ASW_DEBUG_COVERAGE
+    color.xyz = lerp(color.xyz, _ASWDebugCoverageColor.xyz, _ASWDebugCoverageColor.w);
+#endif
     return color;
 }
