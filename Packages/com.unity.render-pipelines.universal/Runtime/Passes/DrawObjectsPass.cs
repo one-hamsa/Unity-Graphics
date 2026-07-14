@@ -140,6 +140,15 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_ProfilingSampler = ProfilingSampler.Get(profileId);
         }
 
+        /// <summary>
+        /// Restricts the pass to renderers whose renderingLayerMask overlaps this mask.
+        /// Used by the near/far field split (<see cref="UDNearFarSplit"/>).
+        /// </summary>
+        internal void SetRenderingLayerMask(uint mask)
+        {
+            m_FilteringSettings.renderingLayerMask = mask;
+        }
+
         /// <inheritdoc/>
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {

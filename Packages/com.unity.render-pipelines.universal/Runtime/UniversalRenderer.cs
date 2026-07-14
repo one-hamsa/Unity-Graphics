@@ -101,6 +101,7 @@ namespace UnityEngine.Rendering.Universal
         DeferredPass m_DeferredPass;
         DrawObjectsPass m_RenderOpaqueForwardOnlyPass;
         DrawObjectsPass m_RenderOpaqueForwardPass;
+        DrawObjectsPass m_RenderOpaqueFarFieldPass;
         DrawObjectsWithRenderingLayersPass m_RenderOpaqueForwardWithRenderingLayersPass;
         DrawSkyboxPass m_DrawSkyboxPass;
         CopyDepthPass m_CopyDepthPass;
@@ -281,6 +282,11 @@ namespace UnityEngine.Rendering.Universal
             m_OculusMotionVecPass = new OculusMotionVectorPass(URPProfileId.DrawMVOpaqueObjects, true, RenderPassEvent.AfterRenderingPrePasses, RenderQueueRange.all, data.opaqueLayerMask, m_DefaultStencilState, stencilData.stencilReference);
             // Always create this pass even in deferred because we use it for wireframe rendering in the Editor or offscreen depth texture rendering.
             m_RenderOpaqueForwardPass = new DrawObjectsPass(URPProfileId.DrawOpaqueObjects, true, RenderPassEvent.BeforeRenderingOpaques, RenderQueueRange.opaque, data.opaqueLayerMask, m_DefaultStencilState, stencilData.stencilReference);
+            // Far-field half of the near/far split (UDNearFarSplit). Only ever enqueued for the
+            // split target camera; draws opaques tagged with the far-field rendering layer under
+            // cheaper pass-scoped shader state (no main light shadows, hard UDShadow, mono view dir).
+            m_RenderOpaqueFarFieldPass = new UDFarFieldDrawObjectsPass("Render Opaques Far Field", RenderPassEvent.BeforeRenderingOpaques, RenderQueueRange.opaque, data.opaqueLayerMask, m_DefaultStencilState, stencilData.stencilReference);
+            m_RenderOpaqueFarFieldPass.SetRenderingLayerMask(UDNearFarSplit.FarFieldRenderingLayer);
             m_RenderOpaqueForwardWithRenderingLayersPass = new DrawObjectsWithRenderingLayersPass(URPProfileId.DrawOpaqueObjects, true, RenderPassEvent.BeforeRenderingOpaques, RenderQueueRange.opaque, data.opaqueLayerMask, m_DefaultStencilState, stencilData.stencilReference);
 
             bool copyDepthAfterTransparents = m_CopyDepthMode == CopyDepthMode.AfterTransparents;
@@ -557,6 +563,12 @@ namespace UnityEngine.Rendering.Universal
 
             // Because of the shortcutting done by depth only offscreen cameras, useDepthPriming must be computed early
             useDepthPriming = IsDepthPrimingEnabled(ref cameraData);
+
+            // Near/far field split: the near (stock opaque) pass excludes far-field renderers; the far
+            // pass draws them right after it. Mask is reset per camera because pass objects are shared
+            // by every camera rendering through this renderer instance.
+            bool splitFarField = UDNearFarSplit.ShouldSplit(camera);
+            m_RenderOpaqueForwardPass.SetRenderingLayerMask(splitFarField ? ~UDNearFarSplit.FarFieldRenderingLayer : uint.MaxValue);
 
             // Special path for depth only offscreen cameras. Only write opaques + transparents.
             if (IsOffscreenDepthTexture(in cameraData))
@@ -1136,6 +1148,18 @@ namespace UnityEngine.Rendering.Universal
                 renderOpaqueForwardPass.ConfigureClear(opaqueForwardPassClearFlag, Color.black);
 
                 EnqueuePass(renderOpaqueForwardPass);
+
+                // Far-field opaques draw after the near pass, into the same target: no clear, and on
+                // tilers the passes merge (same attachments), so the split adds no load/store cost.
+                // Skipped on the rendering-layers (decal) path — that pass owns the layer semantics.
+                if (splitFarField && !renderingLayerProvidesRenderObjectPass)
+                {
+                    m_RenderOpaqueFarFieldPass.m_IsActiveTargetBackBuffer = m_RenderOpaqueForwardPass.m_IsActiveTargetBackBuffer;
+                    m_RenderOpaqueFarFieldPass.ConfigureColorStoreAction(opaquePassColorStoreAction);
+                    m_RenderOpaqueFarFieldPass.ConfigureDepthStoreAction(opaquePassDepthStoreAction);
+                    m_RenderOpaqueFarFieldPass.ConfigureClear(ClearFlag.None, Color.black);
+                    EnqueuePass(m_RenderOpaqueFarFieldPass);
+                }
             }
 
             if (camera.clearFlags == CameraClearFlags.Skybox && cameraData.renderType != CameraRenderType.Overlay)

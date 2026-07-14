@@ -201,9 +201,16 @@ namespace UnityEngine.Rendering.Universal.Internal
                 m_CascadeSlices[i].Clear();
         }
 
+        // Mirrors the last-applied global state of the main light shadow keywords, so passes that
+        // scope these keywords off (the UDNearFarSplit far-field pass) can restore them without
+        // replicating the decision logic.
+        internal static bool appliedMainLightShadowsKeyword;
+        internal static bool appliedMainLightShadowCascadesKeyword;
+
         void SetEmptyMainLightCascadeShadowmap(ref ScriptableRenderContext context, ref RenderingData renderingData)
         {
             CommandBuffer cmd = renderingData.commandBuffer;
+            appliedMainLightShadowsKeyword = true;
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadows, true);
             SetEmptyMainLightShadowParams(cmd);
             context.ExecuteCommandBuffer(cmd);
@@ -253,8 +260,10 @@ namespace UnityEngine.Rendering.Universal.Internal
                 }
 
                 renderingData.shadowData.isKeywordSoftShadowsEnabled = shadowLight.light.shadows == LightShadows.Soft && renderingData.shadowData.supportsSoftShadows;
-                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadows, renderingData.shadowData.mainLightShadowCascadesCount == 1);
-                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadowCascades, renderingData.shadowData.mainLightShadowCascadesCount > 1);
+                appliedMainLightShadowsKeyword = renderingData.shadowData.mainLightShadowCascadesCount == 1;
+                appliedMainLightShadowCascadesKeyword = renderingData.shadowData.mainLightShadowCascadesCount > 1;
+                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadows, appliedMainLightShadowsKeyword);
+                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadowCascades, appliedMainLightShadowCascadesKeyword);
                 ShadowUtils.SetSoftShadowQualityShaderKeywords(cmd, ref renderingData.shadowData);
 
                 SetupMainLightShadowReceiverConstants(cmd, ref shadowLight, ref renderingData.shadowData);
