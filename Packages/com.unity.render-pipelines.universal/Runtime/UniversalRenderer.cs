@@ -206,7 +206,10 @@ namespace UnityEngine.Rendering.Universal
                 m_LightCookieManager = new LightCookieManager(ref settings);
             }
 
-            this.stripShadowsOffVariants = true;
+            // Shadows-off variants must exist in builds: the UDNearFarSplit far-field pass disables
+            // the main light shadow keywords per-pass, and with the off variants stripped Unity
+            // silently binds the shadows-on variant instead (editor works, device doesn't).
+            this.stripShadowsOffVariants = false;
             this.stripAdditionalLightOffVariants = true;
 #if ENABLE_VR && ENABLE_VR_MODULE
 #if PLATFORM_WINRT || PLATFORM_ANDROID

@@ -1421,6 +1421,10 @@ namespace UnityEngine.Rendering.Universal
             // Reset per-camera shader keywords. They are enabled depending on which render passes are executed.
             cmd.DisableShaderKeyword(ShaderKeywordStrings.MainLightShadows);
             cmd.DisableShaderKeyword(ShaderKeywordStrings.MainLightShadowCascades);
+            // Keep the UDNearFarSplit restore mirrors in sync with the actual keyword state, so a
+            // camera whose shadow pass doesn't run this frame restores to off, not to stale values.
+            Internal.MainLightShadowCasterPass.appliedMainLightShadowsKeyword = false;
+            Internal.MainLightShadowCasterPass.appliedMainLightShadowCascadesKeyword = false;
             cmd.DisableShaderKeyword(ShaderKeywordStrings.AdditionalLightsVertex);
             cmd.DisableShaderKeyword(ShaderKeywordStrings.AdditionalLightsPixel);
             cmd.DisableShaderKeyword(ShaderKeywordStrings.ForwardPlus);

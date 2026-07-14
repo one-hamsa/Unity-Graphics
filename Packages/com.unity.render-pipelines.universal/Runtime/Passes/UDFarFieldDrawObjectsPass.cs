@@ -29,6 +29,18 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.DisableShaderKeyword(ShaderKeywordStrings.MainLightShadows);
             cmd.DisableShaderKeyword(ShaderKeywordStrings.MainLightShadowCascades);
 
+            // Soft-shadow keywords off too: if a build still lacks a shader's shadows-off variant,
+            // the fallback shadows-on variant then degrades to a single hard tap instead of 4-tap PCF.
+            cmd.DisableShaderKeyword(ShaderKeywordStrings.SoftShadows);
+            cmd.DisableShaderKeyword(ShaderKeywordStrings.SoftShadowsLow);
+            cmd.DisableShaderKeyword(ShaderKeywordStrings.SoftShadowsMedium);
+            cmd.DisableShaderKeyword(ShaderKeywordStrings.SoftShadowsHigh);
+
+            // Opt-in variant hook for shaders that declare it: lets a shader compile out work that
+            // doesn't read at far-field distances (player light, fresnel, ...). No-op for shaders
+            // without the keyword.
+            cmd.EnableShaderKeyword("_UD_FAR_FIELD");
+
             // QualitySetter drives this keyword through the immediate Shader API, so the
             // main-thread state is the correct restore target.
             bool udSoftShadows = Shader.IsKeywordEnabled(s_UDSoftShadowsKeyword);
@@ -54,6 +66,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             // Restore for the passes that follow this frame (skybox, transparents, features).
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadows, MainLightShadowCasterPass.appliedMainLightShadowsKeyword);
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadowCascades, MainLightShadowCasterPass.appliedMainLightShadowCascadesKeyword);
+            ShadowUtils.SetSoftShadowQualityShaderKeywords(cmd, ref renderingData.shadowData);
+            cmd.DisableShaderKeyword("_UD_FAR_FIELD");
             if (udSoftShadows)
                 cmd.SetKeyword(s_UDSoftShadowsKeyword, true);
 #if ENABLE_VR && ENABLE_XR_MODULE
