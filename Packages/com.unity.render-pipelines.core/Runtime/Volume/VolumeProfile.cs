@@ -321,34 +321,47 @@ namespace UnityEngine.Rendering
             return count != result.Count;
         }
 
-        /// <summary>
-        /// A custom hashing function that Unity uses to compare the state of parameters.
-        /// </summary>
-        /// <returns>A computed hash code for the current instance.</returns>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hash = 17;
-
-                for (int i = 0; i < components.Count; i++)
-                    hash = hash * 23 + components[i].GetHashCode();
-
-                return hash;
-            }
-        }
-
         internal int GetComponentListHashCode()
         {
             unchecked
             {
-                int hash = 17;
+                var hashCode = HashFNV1A32.Create();
 
                 for (int i = 0; i < components.Count; i++)
-                    hash = hash * 23 + components[i].GetType().GetHashCode();
+                    hashCode.Append(components[i].GetType().GetHashCode());
 
-                return hash;
+                return hashCode.value;
             }
+        }
+
+        /// <summary>
+        /// Computes a hash of the current state of every component on this profile
+        /// (the values and override flags of all their parameters).
+        /// Intended for change detection — for example, detecting that a Volume Profile
+        /// asset has been edited and a dependent cached resource must be rebuilt.
+        /// </summary>
+        /// <remarks>
+        /// This value mutates as parameters change, so it must not be used as a key in
+        /// a <see cref="System.Collections.Generic.Dictionary{TKey,TValue}"/>,
+        /// <see cref="System.Collections.Generic.HashSet{T}"/>, or any other structure
+        /// that assumes a stable hash. Use <see cref="object.GetHashCode"/> for that.
+        ///
+        /// This hash covers parameter state only. To detect changes to the *set* of
+        /// components on the profile (additions/removals), use
+        /// <see cref="GetComponentListHashCode"/>.
+        /// </remarks>
+        /// <returns>A hash that changes whenever any component's state changes.</returns>
+        public int GetStateHash()
+        {
+            var hash = HashFNV1A32.Create();
+            for (int i = 0; i < components.Count; i++)
+            {
+                var comp = components[i];
+                if (comp == null)
+                    continue;
+                hash.Append(comp.GetStateHash());
+            }
+            return hash.value;
         }
 
         /// <summary>

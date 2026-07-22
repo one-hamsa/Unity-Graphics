@@ -310,19 +310,6 @@ namespace UnityEditor.Rendering.Tests
 
         #region Decorators Handling Test
 
-        [HideInInspector]
-        class VolumeComponentDecorators : VolumeComponent
-        {
-            [Tooltip("Increase to make the noise texture appear bigger and less")]
-            public FloatParameter _NoiseTileSize = new FloatParameter(25.0f);
-
-            [InspectorName("Color")]
-            public ColorParameter _FogColor = new ColorParameter(Color.grey);
-
-            [InspectorName("Size and occurrence"), Tooltip("Increase to make patches SMALLER, and frequent")]
-            public ClampedFloatParameter _HighNoiseSpaceFreq = new ClampedFloatParameter(0.1f, 0.1f, 1f);
-        }
-
         readonly (string displayName, string tooltip)[] k_ExpectedResults =
         {
             (string.Empty, "Increase to make the noise texture appear bigger and less"),
@@ -408,14 +395,6 @@ namespace UnityEditor.Rendering.Tests
 
             Assert.That(() => volumeManager.GetVolumeComponentsForDisplay(typeof(CustomRenderPipeline)), Throws.ArgumentException);
             Assert.IsNotNull(volumeManager.GetVolumeComponentsForDisplay(null));
-        }
-
-        [Test]
-        public void TestVolumeManagerFetchsTypesWhenNotInitialized()
-        {
-            var volumeManager = new VolumeManager();
-            var typesForDisplay = volumeManager.GetVolumeComponentsForDisplay(typeof(CustomRenderPipelineAsset));
-            Assert.IsTrue(typesForDisplay.Count > 0);
         }
     }
 }

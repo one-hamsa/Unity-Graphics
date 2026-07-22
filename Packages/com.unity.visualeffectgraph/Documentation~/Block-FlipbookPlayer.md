@@ -10,7 +10,7 @@ Flipbook textures are texture sheets that consist of multiple smaller sub-images
 
 To generate a Flipbook, use external digital content creation tools.
 
-To set an output to use flipbooks, change its **UV Mode** to **Flipbook**. For more information on the different UV Modes, refer to the documentation for the various output Contexts.
+To set an output to use flipbooks, change its **UV Mode** to **Flipbook**. For more information on the different UV Modes, refer to the documentation for the various output contexts. If you use a Shader Graph output context, refer to [Use the Flipbook Player with a Shader Graph output](#use-the-flipbook-player-with-a-shadergraph-output).
 
 There are two different modes to control the playback: **Frame Rate** and **Cycles**. Additionally, in both modes, you can control the **Animation Range**.
 
@@ -48,6 +48,26 @@ You can select a subset of frames to be played:
 - **Flipbook Column**: Only play the frames in the column selected by **Index**.
 - **Start End Frames**: Specify the start and end frames of the animation, inclusive.
 
+## Use the Flipbook Player with a Shader Graph output
+
+Shader graph output contexts, such as **Output Particle ShaderGraph Quad**, do not have a **UV Mode** setting. Instead, set up flipbook texture sampling inside the shader graph.
+
+To use the Flipbook Player block with a Shader Graph output:
+
+1. Open your shader graph in the Shader Graph window.
+2. In the **Graph Settings** tab, enable **Support VFX Graph**. For more information, refer to [Working with Shader Graph in the Visual Effect Graph](sg-working-with.md).
+3. In the **Blackboard**, add a **Float** property and name it **Particle TexIndex**. 
+4. Add a [**Flipbook**](https://docs.unity3d.com/Packages/com.unity.shadergraph@latest?subfolder=/manual/Flipbook-Node.html) node to the graph.
+5. Connect the **Particle TexIndex** property node to the **Tile** input of the **Flipbook** node.
+6. Set the **Width** and **Height** inputs of the **Flipbook** node to the column and row count of your flipbook texture.
+7. Connect the **Out** output of the **Flipbook** node to the **UV** input of a **Sample Texture 2D** node, and connect your flipbook texture to the **Texture** input.
+8. Assign the shader graph to an **Output Particle ShaderGraph** output context in your Visual Effect Graph.
+9. In the output context, add a **[Get Attribute: texIndex](Operator-GetAttributeTexIndex.md)** operator and connect its output to the **Particle TexIndex** port.
+
+The Flipbook Player block updates the `texIndex` attribute each frame. The shader graph uses this value to select the correct sub-image from the flipbook texture.
+
+**Note**: The Visual Effect Graph package includes sample shader graphs for flipbook effects. To access the sample shader graphs, go to **Window** > **Package Manager**, select **Visual Effect Graph**, and import the **VFX Graph Additions** sample.
+
 ## Block compatibility
 
 This Block is compatible with the following Contexts:
@@ -62,10 +82,10 @@ This Block is compatible with the following Contexts:
 | **Frame Rate Mode**  | Enum     | Selects between different modes to control the frame rate when **FrameRate** mode is selected. Refer to [Frame Rate mode](#frame-rate-mode). |
 | **Cycles Mode**      | Enum     | Selects between different modes to specify the number of cycles when **Cycles** mode is selected. Refer to [Cycles mode](#cycles-mode). |
 | **Animation Range**  | Enum     | Different modes to control which frames are displayed. Refer to [Animation Range](#animation-range). |
-| **Use Custom Range** | Boolean  | In **FrameRate** mode, allows to customize the animation range. |
+| **Use Custom Range** | Boolean  | In **Frame Rate** mode, allows you to customize the animation range. |
 | **Reverse**          | Boolean  | Plays the animation from end to start. |
 | **Clamp Blending**   | Boolean  | Only visible if flipbook blending is enabled. Clamps the blending between the last and first frames. |
-| **Custom Curve**     | Boolean  | Allows using a curve to control animation speed over one cycle. By default, speed is linear: each frame is displayed for the same amount of time. |
+| **Custom Curve**     | Boolean  | Allows using a curve to control animation speed over one cycle. By default, speed is linear: each frame is displayed for the same amount of time. In **Frame Rate** mode, this property only appears if you enable **Over Lifetime**, **By Speed**, or **Custom**.  In **Cycles** mode, this property only appears if you enable **Custom Curve**. |
 
 ## Block properties
 

@@ -2182,11 +2182,11 @@ namespace UnityEngine.Rendering.HighDefinition
             m_RequireOffscreenUICoverPrepass = HDROutputForMainDisplayIsActive() && SupportedRenderingFeatures.active.rendersUIOverlay && !CoreUtils.IsScreenFullyCoveredByCameras(cameras);
             m_OffscreenUIRenderedInCurrentFrame = false;
 
-            // Reallocate the offscreen UI buffer when the resolution changes.
-            ReAllocateOffscreenUIColorBufferIfNeeded();
-
             if (!m_ValidAPI || cameraCount == 0)
                 return;
+
+            // Reallocate the offscreen UI buffer when the resolution changes.
+            ReAllocateOffscreenUIColorBufferIfNeeded();
 
             GPUResidentDrawer.ReinitializeIfNeeded();
 
@@ -2728,9 +2728,6 @@ namespace UnityEngine.Rendering.HighDefinition
                 }
                 else
                 {
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-                    m_DebugDisplaySettings.UpdateCameraFreezeOptions();
-#endif
                     m_CurrentDebugDisplaySettings = m_DebugDisplaySettings;
                 }
 
@@ -3062,6 +3059,9 @@ namespace UnityEngine.Rendering.HighDefinition
                 frozenCullingParamAvailable = false;
             }
 
+
+            cullingParams.conservativeEnclosingSphere = currentAsset.m_ShouldUseConservativeEnclosingSphere;
+            cullingParams.numIterationsEnclosingSphere = currentAsset.m_NumIterationsEnclosingSphere;
             LightLoopUpdateCullingParameters(ref cullingParams, hdCamera);
 
             // If we don't use environment light (like when rendering reflection probes)
@@ -3471,7 +3471,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         void ReAllocateOffscreenUIColorBufferIfNeeded()
         {
-            if (m_OffscreenUIColorBuffer.IsValueCreated)
+            if (m_OffscreenUIColorBuffer != null && m_OffscreenUIColorBuffer.IsValueCreated)
             {
                 if (Screen.width != m_OffscreenUIColorBuffer.Value.rt.width || Screen.height != m_OffscreenUIColorBuffer.Value.rt.height)
                 {

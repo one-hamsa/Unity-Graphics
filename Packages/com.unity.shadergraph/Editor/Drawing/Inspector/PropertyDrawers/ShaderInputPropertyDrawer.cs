@@ -68,6 +68,10 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
         const string m_EnumRefDisallowedPattern = @"(?:[^A-Za-z_0-9_.])";
         const string m_AttributeValueDisallowedPattern = @"(?:[^A-Za-z_0-9._ ])";
 
+        const string kHDRTextureToggleTooltip =
+            "When enabled, any node which samples this texture will automatically decode the sampled value" +
+            " if the texture was stored using an encoded HDR format such as dLDR.";
+
         public ShaderInputPropertyDrawer()
         {
             greyLabel = new GUIStyle(EditorStyles.label);
@@ -1020,6 +1024,19 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                     new ToggleData(texture2DProperty.useTexelSize, true),
                     "Use TexelSize",
                     out var texelSizeToggle));
+                    propertySheet.Add(togglePropertyDrawer.CreateGUI(
+                    newValue =>
+                    {
+                        this._preChangeValueCallback("Change Is HDR");
+                        if (texture2DProperty.isHDR == newValue.isOn)
+                            return;
+                        texture2DProperty.isHDR = newValue.isOn;
+                        this._postChangeValueCallback(modificationScope: ModificationScope.Graph);
+                    },
+                    new ToggleData(texture2DProperty.isHDR, true),
+                    "Is HDR",
+                    out var isHDRToggle,
+                    tooltip: kHDRTextureToggleTooltip));
             }
         }
 
@@ -1037,6 +1054,24 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 isCurrentPropertyGlobal ? "Preview Value" : "Default Value",
                 out var texture2DArrayField
             ));
+
+            if (!isSubGraph || shaderInput.promoteToFinalShader)
+            {
+                var togglePropertyDrawer = new ToggleDataPropertyDrawer();
+                propertySheet.Add(togglePropertyDrawer.CreateGUI(
+                newValue =>
+                {
+                    this._preChangeValueCallback("Change Is HDR");
+                    if (texture2DArrayProperty.isHDR == newValue.isOn)
+                        return;
+                    texture2DArrayProperty.isHDR = newValue.isOn;
+                    this._postChangeValueCallback(modificationScope: ModificationScope.Graph);
+                },
+                new ToggleData(texture2DArrayProperty.isHDR, true),
+                "Is HDR",
+                out var isHDRToggle,
+                tooltip: kHDRTextureToggleTooltip));
+            }
         }
 
         #region VT reorderable list handler
@@ -1296,6 +1331,24 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 isCurrentPropertyGlobal ? "Preview Value" : "Default Value",
                 out var texture3DField
             ));
+
+            if (!isSubGraph || shaderInput.promoteToFinalShader)
+            {
+                ToggleDataPropertyDrawer togglePropertyDrawer = new ToggleDataPropertyDrawer();
+                propertySheet.Add(togglePropertyDrawer.CreateGUI(
+                    newValue =>
+                    {
+                        this._preChangeValueCallback("Change Is HDR");
+                        if (texture3DShaderProperty.isHDR == newValue.isOn)
+                            return;
+                        texture3DShaderProperty.isHDR = newValue.isOn;
+                        this._postChangeValueCallback(modificationScope: ModificationScope.Graph);
+                    },
+                    new ToggleData(texture3DShaderProperty.isHDR, true),
+                    "Is HDR",
+                    out var isHDRToggle,
+                    tooltip: kHDRTextureToggleTooltip));
+            }
         }
 
         void HandleCubemapProperty(PropertySheet propertySheet, CubemapShaderProperty cubemapProperty)
@@ -1312,6 +1365,24 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 isCurrentPropertyGlobal ? "Preview Value" : "Default Value",
                 out var propertyCubemapField
             ));
+
+            if (!isSubGraph || shaderInput.promoteToFinalShader)
+            {
+                ToggleDataPropertyDrawer togglePropertyDrawer = new ToggleDataPropertyDrawer();
+                propertySheet.Add(togglePropertyDrawer.CreateGUI(
+                    newValue =>
+                    {
+                        this._preChangeValueCallback("Change Is HDR");
+                        if (cubemapProperty.isHDR == newValue.isOn)
+                            return;
+                        cubemapProperty.isHDR = newValue.isOn;
+                        this._postChangeValueCallback(modificationScope: ModificationScope.Graph);
+                    },
+                    new ToggleData(cubemapProperty.isHDR, true),
+                    "Is HDR",
+                    out var isHDRToggle,
+                    tooltip: kHDRTextureToggleTooltip));
+            }
         }
 
         void HandleBooleanProperty(PropertySheet propertySheet, BooleanShaderProperty booleanProperty)
@@ -1600,7 +1671,8 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                         return;
                     keyword.keywordDefinition = (KeywordDefinition)newValue;
                     UpdateEnableState();
-                    this._postChangeValueCallback(true, ModificationScope.Nothing);
+                    this._postChangeValueCallback(true);
+                    this._keywordChangedCallback();
                 },
                 keyword.keywordDefinition,
                 "Definition",
@@ -1614,6 +1686,19 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 propertySheet.Add(help);
             }
 
+            var isShaderBuildSettingsCompatibleDrawer = new ToggleDataPropertyDrawer();
+            propertySheet.Add(isShaderBuildSettingsCompatibleDrawer.CreateGUI(
+                newValue =>
+                {
+                    this._preChangeValueCallback("Change Keyword Allow Definition Override");
+                    keyword.IsShaderBuildSettingsCompatible = newValue.isOn;
+                    this._postChangeValueCallback(modificationScope: ModificationScope.Graph);
+                },
+                new ToggleData(keyword.IsShaderBuildSettingsCompatible),
+                "Allow Definition Override",
+                out VisualElement isShaderBuildSettingsCompatibleToggle,
+                tooltip: "Indicates whether this keyword's definition can be overridden by the project's shader build settings."));
+
             typeField.SetEnabled(!keyword.isBuiltIn);
             {
                 var isOverridablePropertyDrawer = new ToggleDataPropertyDrawer();
@@ -1622,15 +1707,15 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 propertySheet.Add(isOverridablePropertyDrawer.CreateGUI(
                     newValue =>
                     {
-                        this._preChangeValueCallback("Change Keyword Is Overridable");
+                        this._preChangeValueCallback("Change Keyword Allow State Override");
                         keyword.keywordScope = newValue.isOn
                             ? KeywordScope.Global
                             : KeywordScope.Local;
                     },
                     new ToggleData(toggleState),
-                    "Is Overridable",
+                    "Allow State Override",
                     out keywordScopeField,
-                    tooltip: "Indicate whether this keyword's state can be overridden through the Shader.SetKeyword scripting interface."));
+                    tooltip: "Indicates whether this keyword's state can be overridden through the Shader.SetKeyword scripting interface."));
                 keywordScopeField.SetEnabled(enabledState);
             }
             BuildExposedField(propertySheet);
@@ -1685,6 +1770,24 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
         {
             // Clamp value between entry list
             int value = Mathf.Clamp(keyword.value, 0, keyword.entries.Count - 1);
+
+            // Include "none" entry
+            var includeNoneDrawer = new ToggleDataPropertyDrawer();
+            propertySheet.Add(includeNoneDrawer.CreateGUI(
+                (newValue) =>
+                {
+                    this._preChangeValueCallback("Change Include None Value");
+                    if (newValue.isOn)
+                        keyword.entries.Insert(0, new KeywordEntry(GetFirstUnusedKeywordID(), "None", string.Empty));
+                    else
+                        keyword.entries.RemoveAll(entry => entry.IsNoneKeyword);
+                    this._postChangeValueCallback();
+                    this._keywordChangedCallback();
+                },
+                new ToggleData(keyword.HasNoneEntry),
+                "Include \"none\" entry",
+                out VisualElement includeNoneToggle,
+                tooltip: "Indicates whether the enum can assume a \"none\" value as indicated by the \"_\" keyword."));
 
             // Default field
             var field = new PopupField<string>(keyword.entries.Select(x => x.displayName).ToList(), value);
@@ -1932,6 +2035,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
             {
                 KeywordEntry entry = ((KeywordEntry)m_KeywordReorderableList.list[index]);
                 EditorGUI.BeginChangeCheck();
+                EditorGUI.BeginDisabled(entry.IsNoneKeyword);
 
                 Rect displayRect = new Rect(rect.x, rect.y, rect.width / 2, EditorGUIUtility.singleLineHeight);
                 var displayName = EditorGUI.DelayedTextField(displayRect, entry.displayName, EditorStyles.label);
@@ -1940,6 +2044,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 var referenceName = EditorGUI.TextField(new Rect(rect.x + rect.width / 2, rect.y, rect.width / 2, EditorGUIUtility.singleLineHeight), entry.referenceName,
                     keyword.isBuiltIn ? EditorStyles.label : greyLabel);
 
+                EditorGUI.EndDisabled();
                 if (EditorGUI.EndChangeCheck())
                 {
                     this._preChangeValueCallback("Edit Enum Keyword Entry");
@@ -1957,9 +2062,10 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                     else if (int.TryParse(displayName, out int intVal) || float.TryParse(displayName, out float floatVal))
                         Debug.LogWarning("Invalid display name. Display names cannot be valid integer or floating point numbers.");
                     else
-                        keyword.entries[index] = new KeywordEntry(GetFirstUnusedKeywordID(), displayName, referenceName);
+                        keyword.entries[index] = new KeywordEntry(entry.id, displayName, referenceName);
 
                     this._postChangeValueCallback(true);
+                    this._keywordChangedCallback();
                 }
             };
 
@@ -2064,8 +2170,28 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
         void KeywordReorderEntries(ReorderableList list)
         {
+            if (shaderInput is not ShaderKeyword keyword)
+                return;
+
+            // Ensure that the "none" entry is always at position 0
+            int noneEntryIndex = 0;
+            for (; noneEntryIndex < list.list.Count; ++noneEntryIndex)
+            {
+                KeywordEntry entry = (KeywordEntry)list.list[noneEntryIndex];
+                if (entry.IsNoneKeyword)
+                    break;
+            }
+            if (0 < noneEntryIndex && noneEntryIndex < list.list.Count)
+            {
+                object noneEntry = list.list[noneEntryIndex];
+                list.list.RemoveAt(noneEntryIndex);
+                list.list.Insert(0, noneEntry);
+            }
+
             this._preChangeValueCallback("Reorder Keyword Entry");
             this._postChangeValueCallback(true);
+            this._keywordChangedCallback();
+
         }
 
         public string GetDuplicateSafeEnumDisplayName(int id, string name)

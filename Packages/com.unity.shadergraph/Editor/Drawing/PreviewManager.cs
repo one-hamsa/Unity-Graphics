@@ -1402,7 +1402,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             // Skip generation for VFXTarget
             if (!m_Graph.isOnlyVFXTarget)
             {
-                var generator = new Generator(m_Graph, m_Graph.outputNode, GenerationMode.Preview, "Master");
+                // UITK shaders need ForReals mode to have access to UITK macros for proper rendering
+                // Use PreviewForReals to get both ForReals features and Preview slot behavior (uniforms instead of inlined constants)
+                var mode = prefersUITKPreview ? GenerationMode.PreviewForReals : GenerationMode.Preview;
+                var generator = new Generator(m_Graph, m_Graph.outputNode, mode, "Master");
                 shaderData.shaderString = generator.generatedShader;
 
                 // record the blocks temporarily created for missing stack blocks

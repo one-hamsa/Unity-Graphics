@@ -12,7 +12,7 @@ using UnityEditor.VFX.UI;
 using UnityEngine;
 using UnityEngine.VFX;
 using UnityEngine.Profiling;
-
+using Object = System.Object;
 using UnityObject = UnityEngine.Object;
 
 namespace UnityEditor.VFX
@@ -214,6 +214,8 @@ namespace UnityEditor.VFX
                 compiledVersionProperty.intValue = (int)VFXGraphCompiledData.compiledVersion;
                 runtimeVersionProperty.intValue = (int)VisualEffectAsset.currentRuntimeDataVersion;
                 serializedVFXManager.ApplyModifiedProperties();
+                EditorUtility.SetDirty(vfxmanager);
+                AssetDatabase.SaveAssets();
 
                 AssetDatabase.StartAssetEditing();
                 try
@@ -1534,7 +1536,7 @@ namespace UnityEditor.VFX
                             }
 
                             //OnSetupMaterial equivalent
-                            var model = task.model;
+                            var model = EditorUtility.EntityIdToObject(task.modelId);
                             if (model is IVFXSubRenderer subRenderer)
                             {
                                 subRenderer.SetupMaterial(writableMaterial);

@@ -21,7 +21,7 @@ All properties have the following common parameters in addition to those specifi
 | **Preview Value** | Sets a value to use for preview in the Shader Graph window, only when you set **Scope** to **Global**. |
 | **Show In Inspector** | Displays the property in the material Inspector when enabled.<br/>If you disable this option, it includes an `[HideInInspector]` attribute to the material property (refer to [Properties block reference in ShaderLab](https://docs.unity3d.com/Manual/SL-Properties.html#material-property-attributes) for more details). |
 | **Read Only** | Marks the property as non-editable in the material Inspector by adding the [`PerRendererData`](https://docs.unity3d.com/ScriptReference/Rendering.ShaderPropertyFlags.html) attribute. |
-| **Custom Attributes** | Enables attachment of custom scripted drawers or decorators to extend the material property UI, such as adding static headers or complex controls.<br/>The **Custom Material Property Drawers** sample, available in the Package Manager among other [Shader Graph samples](ShaderGraph-Samples.md), shows how to display a Vector2 as a min/max slider, for example.<br/><br/>**Note**: When you declare the custom functions in the script, make sure to suffix their names with `Drawer` or `Decorator`.<br/><br/>In the list, use **+** or **-** to add or remove entries. Each entry corresponds to a function call which requires the following parameters:<ul><li>**Name**: A shorthened version of the function name, without its `Drawer` or `Decorator` suffix.</li><li>**Value**: The input values for the function as the script expects them.</li></ul>**Note**: A property can only have one drawer at any given time. |
+| **Custom Attributes** | Enables attachment of custom scripted drawers or decorators to extend the material property UI, such as adding static headers or complex controls.<br/>The [Custom Material Property Drawers](Shader-Graph-Sample-Custom-Material-Property-Drawers.md) sample shows how to display a Vector2 as a min/max slider, for example.<br/><br/>**Note**: When you declare the custom functions in the script, make sure to suffix their names with `Drawer` or `Decorator`.<br/><br/>In the list, use **+** or **-** to add or remove entries. Each entry corresponds to a function call which requires the following parameters:<ul><li>**Name**: A shortened version of the function name, without its `Drawer` or `Decorator` suffix.</li><li>**Value**: The input values for the function as the script expects them.</li></ul>**Note**: A property can only have one drawer at any given time. |
 | **Use Custom Binding** | Turns the property into a bound input port for connection to the [**Branch On Input Connection**](Branch-On-Input-Connection-Node.md) node. In the **Label** field, enter the label for the default value that displays on your Subgraph node's port binding in its parent Shader Graph.<br/>This property is available only in sub graphs. |
 
 ## Float
@@ -122,6 +122,7 @@ Defines a [Texture 2D](https://docs.unity3d.com/Manual/class-TextureImporter.htm
 | **Mode** | Defines the fallback texture Unity uses when none is provided.<br /><br />The options are:<ul><li>**White**: Sets a solid white (1,1,1) texture to ensure full-intensity sampling.</li><li>**Black**: Sets a solid black (0,0,0) texture to yield zero contribution.</li><li>**Grey**: Sets a mid-grey in sRGB (~0.5) as a neutral fallback.</li><li>**Normal Map**: Sets a flat normal value to keep surfaces flat without a normal texture.</li><li>**Linear Grey**: Sets a mid-grey in linear color space.</li><li>**Red**: Sets a solid red (1,0,0) texture, useful for data expected in the red channel.</li></ul> |
 | **Use Tiling and Offset** | Toggles the property `NoScaleOffset` to enable manipulating scale and offset separately from other texture properties; see [SplitTextureTransformNode](Split-Texture-Transform-Node.md).<br />A boolean value. |
 | **Use TexelSize** | Uses the size of texels expressed in UV space. |
+| **Is HDR** | Allows any node that samples the texture to automatically decode the sampled value if the texture is stored in an encoded HDR format (for example, dLDR). |
 
 ## Texture 2D Array
 
@@ -130,6 +131,7 @@ Defines a [Texture 2D Array](https://docs.unity3d.com/Manual/class-TextureImport
 | Parameter | Description |
 | :--- | :--- |
 | **Default Value** | Sets the initial value of the [Property](https://docs.unity3d.com/Manual/SL-Properties.html).<br />A texture asset reference. |
+| **Is HDR** | Allows any node that samples the texture to automatically decode the sampled value if the texture is stored in an encoded HDR format (for example, dLDR). |
 
 ## Texture 3D
 
@@ -138,6 +140,7 @@ Defines a [Texture 3D](https://docs.unity3d.com/Manual/class-TextureImporter.htm
 | Parameter | Description |
 | :--- | :--- |
 | **Default Value** | Sets the initial value of the [Property](https://docs.unity3d.com/Manual/SL-Properties.html).<br />A texture asset reference. |
+| **Is HDR** | Allows any node that samples the texture to automatically decode the sampled value if the texture is stored in an encoded HDR format (for example, dLDR). |
 
 ## Cubemap
 
@@ -146,11 +149,12 @@ Defines a [Cubemap](https://docs.unity3d.com/Manual/class-Cubemap.html) value. D
 | Parameter | Description |
 | :--- | :--- |
 | **Default Value** | Sets the initial value of the [Property](https://docs.unity3d.com/Manual/SL-Properties.html).<br />A cubemap asset reference. |
+| **Is HDR** | Allows any node that samples the texture to automatically decode the sampled value if the texture is stored in an encoded HDR format (for example, dLDR). |
 
 <a name="virtual-texture"> </a>
 ## Virtual Texture
 
-Defines a [Texture Stack](https://docs.unity3d.com/2020.1/Documentation/Manual/svt-use-in-shader-graph.html), which appears as object fields of type  [Texture](https://docs.unity3d.com/Manual/class-TextureImporter.html) in the Material Inspector. The number of fields corresponds to the number of layers in the property.
+Defines a [Texture Stack](https://docs.unity3d.com/Manual/svt-use-in-shader-graph.html), which appears as object fields of type  [Texture](https://docs.unity3d.com/Manual/class-TextureImporter.html) in the Material Inspector. The number of fields corresponds to the number of layers in the property.
 
 | Parameter | Description |
 | :--- | :--- |

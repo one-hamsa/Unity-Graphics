@@ -19,7 +19,7 @@ namespace UnityEngine.Rendering.Universal
     [CoreRPHelpURL("2DShadows", "com.unity.render-pipelines.universal")]
     [ExecuteInEditMode]
     [DisallowMultipleComponent]
-
+    [Icon("UnityEngine/UI/Shadow Icon")]
     [AddComponentMenu("Rendering/2D/Shadow Caster 2D")]
     [MovedFrom(false, "UnityEngine.Experimental.Rendering.Universal", "com.unity.render-pipelines.universal")]
 
@@ -195,9 +195,10 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
-        /// If selfShadows is true, useRendererSilhoutte specifies that the renderer's sihouette should be considered part of the shadow. If selfShadows is false, useRendererSilhoutte specifies that the renderer's sihouette should be excluded from the shadow
+        /// This property is obsolete and no longer has any effect. Its functionality has been removed because it is no longer required.
+        /// To achieve similar behavior, add a ShadowCaster2D component to an empty parent GameObject instead.
         /// </summary>
-        [Obsolete("useRendererSilhoutte is deprecated. Use selfShadows instead. #from(2023.1)")]
+        [Obsolete("useRendererSilhouette is obsolete and no longer has any effect. To achieve similar behavior, add a ShadowCaster2D component to an empty parent GameObject. #from(2023.1)")]
         public bool useRendererSilhouette
         {
             set { m_UseRendererSilhouette = value; }
@@ -274,9 +275,9 @@ namespace UnityEngine.Rendering.Universal
         {
             // Oddly adding and subtracting vectors is expensive here because of the new structures created...
             Vector3 deltaPos;
-            deltaPos.x = light.m_CachedPosition.x - boundingSphere.position.x;
-            deltaPos.y = light.m_CachedPosition.y - boundingSphere.position.y;
-            deltaPos.z = light.m_CachedPosition.z - boundingSphere.position.z;
+            deltaPos.x = light.boundingSphere.position.x - boundingSphere.position.x;
+            deltaPos.y = light.boundingSphere.position.y - boundingSphere.position.y;
+            deltaPos.z = light.boundingSphere.position.z - boundingSphere.position.z;
 
             float distanceSq = Vector3.SqrMagnitude(deltaPos);
 

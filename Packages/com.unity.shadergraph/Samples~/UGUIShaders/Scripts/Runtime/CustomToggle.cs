@@ -17,7 +17,7 @@ namespace Unity.UI.Shaders.Sample
     /// <see cref="Toggle.isOn"/> changes.
     /// <para>Implemented as a variant of <see cref="Toggle"/> to make it work nicely with <see cref="ToggleGroup"/>.</para>
     /// </summary>
-    [AddComponentMenu("UI/ShaderGraph Samples/Toggle")]
+    [AddComponentMenu("UI (Canvas)/ShaderGraph Samples/Toggle")]
     [RequireComponent(typeof(Graphic))]
     public class CustomToggle : Toggle, IMaterialModifier
     {
@@ -61,6 +61,7 @@ namespace Unity.UI.Shaders.Sample
         protected override void Awake()
         {
             base.Awake();
+            onValueChanged.AddListener((x) => UpdateMaterial());
         }
 
 #if UNITY_EDITOR
@@ -85,31 +86,13 @@ namespace Unity.UI.Shaders.Sample
             if (!PrefabUtility.IsPartOfPrefabAsset(this) && !Application.isPlaying)
                 CanvasUpdateRegistry.RegisterCanvasElementForLayoutRebuild(this);
 
-            UpdateMaterial(true);
+            UpdateMaterial();
         }
 #endif
 
-        public void UpdateMaterial(bool findGroupToggles = false)
+        public void UpdateMaterial()
         {
-            if (group != null)
-            {
-                if (findGroupToggles) // only used in Edit mode when ToggleGroup isn't initialized already
-                {
-                    foreach (var t in FindObjectsByType<CustomToggle>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                        if (t.group == group)
-                            t.Graphic.SetMaterialDirty();
-                }
-                else
-                {
-                    foreach(var t in group.ActiveToggles())
-                        if (t is CustomToggle customToggle)
-                            customToggle.Graphic.SetMaterialDirty();
-                }
-            }
-            else
-            {
-                Graphic.SetMaterialDirty();
-            }
+            Graphic.SetMaterialDirty();
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant)
@@ -122,7 +105,6 @@ namespace Unity.UI.Shaders.Sample
         public virtual Material GetModifiedMaterial(Material baseMaterial)
         {
             _material ??= new(baseMaterial);
-
             _material.CopyPropertiesFromMaterial(baseMaterial);
 
             if (_material.HasFloat(StatePropertyId))
@@ -130,7 +112,7 @@ namespace Unity.UI.Shaders.Sample
 
             if (_material.HasFloat(IsOnPropertyId))
                 _material.SetFloat(IsOnPropertyId, isOn ? 1 : 0);
-
+            
             return _material;
         }
 
@@ -147,7 +129,7 @@ namespace Unity.UI.Shaders.Sample
         }
 
 #if UNITY_EDITOR
-        [MenuItem("GameObject/UI/ShaderGraph Samples/Toggle", false, 30)]
+        [MenuItem("GameObject/UI (Canvas)/ShaderGraph Samples/Toggle", false, 30)]
         static void CreateToggleGameObject(MenuCommand command)
         {
             GameObject go = ObjectFactory.CreateGameObject("SG Toggle", new Type[] { typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CustomToggle) });

@@ -159,7 +159,7 @@ namespace UnityEditor.ShaderGraph
                 if (!IsValidFunction())
                 {
                     // invalid functions generate special preview code..  (why?)
-                    if (generationMode == GenerationMode.Preview && outputSlots.Count != 0)
+                    if (generationMode.IsPreview() && outputSlots.Count != 0)
                     {
                         outputSlots.OrderBy(s => s.id);
                         var hlslVariableType = outputSlots[0].concreteValueType.ToShaderString();
@@ -244,6 +244,10 @@ namespace UnityEditor.ShaderGraph
                     sb.TryAppendIndentation();
                     sb.Append(slotVariable);
                     sb.Append(".scaleTranslate = float4(1.0f, 1.0f, 0.0f, 0.0f);");
+                    sb.AppendNewLine();
+                    sb.TryAppendIndentation();
+                    sb.Append(slotVariable);
+                    sb.Append(".hdrDecode = float4(0.0f, 0.0f, 0.0f, 0.0f);");
                     sb.AppendNewLine();
                 }
                 break;

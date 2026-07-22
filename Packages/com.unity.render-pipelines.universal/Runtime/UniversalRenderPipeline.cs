@@ -1343,14 +1343,16 @@ namespace UnityEngine.Rendering.Universal
                 particleSystemInstancing = true,
                 overridesEnableLODCrossFade = true
             };
-            if (GraphicsSettings.TryGetRenderPipelineSettings<URPReflectionProbeSettings>(out var reflectionProbeSettings)
-                && !reflectionProbeSettings.UseReflectionProbeRotation)
-            {
-                SupportedRenderingFeatures.active.reflectionProbeModes = SupportedRenderingFeatures.ReflectionProbeModes.None;
-            }
 
             SceneViewDrawMode.SetupDrawMode();
 #endif
+            if (GraphicsSettings.TryGetRenderPipelineSettings<URPReflectionProbeSettings>(out var reflectionProbeSettings))
+            {
+                SupportedRenderingFeatures.active.reflectionProbeModes =
+                    reflectionProbeSettings.UseReflectionProbeRotation
+                        ? SupportedRenderingFeatures.ReflectionProbeModes.Rotation
+                        : SupportedRenderingFeatures.ReflectionProbeModes.None;
+            }
 
             SupportedRenderingFeatures.active.supportsHDR = pipelineAsset.supportsHDR;
             SupportedRenderingFeatures.active.rendersUIOverlay = true;
@@ -2486,18 +2488,18 @@ namespace UnityEngine.Rendering.Universal
             // TODO
             if (!cameraData.xr.enabled)
             {
-                cameraData.cameraTargetDescriptor.width = (int)(cameraData.camera.pixelWidth * cameraData.renderScale);
-                cameraData.cameraTargetDescriptor.height = (int)(cameraData.camera.pixelHeight * cameraData.renderScale);
+                cameraData.cameraTargetDescriptor.width = Mathf.Max(1, (int)(cameraData.pixelWidth * cameraData.renderScale));
+                cameraData.cameraTargetDescriptor.height = Mathf.Max(1, (int)(cameraData.pixelHeight * cameraData.renderScale));
 #if ENABLE_UPSCALER_FRAMEWORK
                 if (cameraData.upscalingFilter == ImageUpscalingFilter.IUpscaler)
                 {
                     // An IUpscaler is active. It might want to change the pre-upscale resolution. Negotiate with it.
                     IUpscaler activeUpscaler = upscaling.GetActiveUpscaler();
                     Debug.Assert(activeUpscaler != null);
-                    Vector2Int res = new Vector2Int(cameraData.cameraTargetDescriptor.width, cameraData.scaledHeight);
+                    Vector2Int res = new Vector2Int(cameraData.cameraTargetDescriptor.width, cameraData.cameraTargetDescriptor.height);
                     activeUpscaler.NegotiatePreUpscaleResolution(ref res, new Vector2Int(cameraData.pixelWidth, cameraData.pixelHeight));
-                    cameraData.cameraTargetDescriptor.width = res.x;
-                    cameraData.cameraTargetDescriptor.height = res.y;
+                    cameraData.cameraTargetDescriptor.width = Mathf.Max(1, res.x);
+                    cameraData.cameraTargetDescriptor.height = Mathf.Max(1, res.y);
                 }
 #endif
                 cameraData.scaledWidth = cameraData.cameraTargetDescriptor.width;

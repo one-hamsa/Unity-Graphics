@@ -183,7 +183,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             static NVIDIA.DLSSPreset Uint2Preset(uint preset)
             {
-                if (preset >= (uint)NVIDIA.DLSSPreset.Preset_Default && preset <= (uint)NVIDIA.DLSSPreset.Preset_K)
+                if (preset >= (uint)NVIDIA.DLSSPreset.Preset_Default && preset <= (uint)NVIDIA.DLSSPreset.Preset_M)
                     return (NVIDIA.DLSSPreset)preset;
                 Debug.LogWarningFormat("Unknown DLSS Preset value {0}, using default value.", preset);
                 return NVIDIA.DLSSPreset.Preset_Default;
@@ -555,8 +555,11 @@ namespace UnityEngine.Rendering.HighDefinition
             dlssViewData.presetDLAA             = parameters.drsSettings.DLSSRenderPresetForDLAA;
 
             dlssViewData.inputRes  = new UpscalerResolution() { width = (uint)parameters.hdCamera.actualWidth, height = (uint)parameters.hdCamera.actualHeight };
-            dlssViewData.outputRes = new UpscalerResolution() { width = (uint)DynamicResolutionHandler.instance.finalViewport.x, height = (uint)DynamicResolutionHandler.instance.finalViewport.y };
-
+            dlssViewData.outputRes = new UpscalerResolution() {
+                width  = (uint)parameters.hdCamera.finalViewport.width,
+                height = (uint)parameters.hdCamera.finalViewport.height
+            };
+            
             dlssViewData.jitterX = -parameters.hdCamera.taaJitter.x;
             dlssViewData.jitterY = -parameters.hdCamera.taaJitter.y;
             dlssViewData.reset = parameters.resetHistory;

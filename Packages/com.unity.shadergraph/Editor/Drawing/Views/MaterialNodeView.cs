@@ -195,11 +195,11 @@ namespace UnityEditor.ShaderGraph.Drawing
             IconBadge badge;
             if (severity == ShaderCompilerMessageSeverity.Error)
             {
-                badge = IconBadge.CreateError(errString);
+                badge = IconBadgeWrapper.CreateError(errString);
             }
             else
             {
-                badge = IconBadge.CreateComment(errString);
+                badge = IconBadgeWrapper.CreateComment(errString);
             }
 
             Add(badge);
@@ -334,6 +334,9 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                 var path = AssetDatabase.GUIDToAssetPath(subgraphNode.subGraphGuid);
                 ShaderGraphImporterEditor.ShowGraphEditWindow(path);
+
+                // Stop the double click event from starting a drag action on the node
+                evt.StopImmediatePropagation();
             }
         }
 
@@ -407,7 +410,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             var mode = (GenerationMode)action.userData;
 
             string path = String.Format("Temp/GeneratedFromGraph-{0}-{1}-{2}{3}.shader", SanitizeName(name),
-                SanitizeName(node.name), node.objectId, mode == GenerationMode.Preview ? "-Preview" : "");
+                SanitizeName(node.name), node.objectId, mode.IsPreview() ? "-Preview" : "");
             if (GraphUtil.WriteToFile(path, ConvertToShader(mode)))
                 GraphUtil.OpenFile(path);
         }

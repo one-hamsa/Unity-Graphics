@@ -123,7 +123,6 @@ namespace UnityEditor.Graphing.Util
                 }
             }
         }
-
         public void ClearAll()
         {
             m_Messages.Clear();

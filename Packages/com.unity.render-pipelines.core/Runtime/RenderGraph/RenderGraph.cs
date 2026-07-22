@@ -1621,6 +1621,16 @@ namespace UnityEngine.Rendering.RenderGraphModule
             m_RenderGraphContext.renderGraphPool = m_RenderGraphPool;
             m_RenderGraphContext.defaultResources = m_DefaultResources;
 
+            // With the actual implementation of the Frame Debugger, we cannot re-use resources during the same frame
+            // or it breaks the rendering of the pass preview, since the FD copies the texture after the execution of the RG.
+            // When disabled, this mode prevents resources released in the current frame from being reused until the next frame.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            bool enableMemoryAliasing = !FrameDebugger.enabled;
+#else
+            bool enableMemoryAliasing = true;
+#endif
+            m_Resources.EnableIntraFrameMemoryAliasing(enableMemoryAliasing);
+
             if (m_DebugParameters.immediateMode)
             {
                 UpdateCurrentCompiledGraph(graphHash: -1, forceNoCaching: true);
@@ -3160,6 +3170,33 @@ namespace UnityEngine.Rendering.RenderGraphModule
                 m_RenderGraphContext.cmd.SetGlobalTexture(globalTex.Key, defaultResources.blackTexture);
             }
         }
+
+        /// <summary>
+        /// Enables or disables intra-frame memory aliasing for render graph resources.
+        /// When enabled, resources released within the same execution can be immediately reused by subsequent passes.
+        /// When disabled, resources released in the current execution cannot be reused until the next execution.
+        /// Note: An execution corresponds to a single RenderGraph recording/execution cycle. Multiple executions can occur
+        /// within the same frame (e.g., Frame Debugger cascade-repaints, multiple cameras).
+        /// This is primarily used for testing purposes and for Frame Debugger compatibility.
+        /// </summary>
+        /// <param name="enabled">True to enable intra-frame memory aliasing, false to disable it.</param>
+        internal void SetIntraFrameMemoryAliasing(bool enabled)
+        {
+            m_Resources.EnableIntraFrameMemoryAliasing(enabled);
+        }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_RegisteredExecutions.Clear();
+            s_EnableCompilationCachingForTests = null;
+            onGraphRegistered = null;
+            onGraphUnregistered = null;
+            onExecutionRegistered = null;
+            s_DebugSessionWasActive = false;
+        }
+#endif
     }
 
     /// <summary>

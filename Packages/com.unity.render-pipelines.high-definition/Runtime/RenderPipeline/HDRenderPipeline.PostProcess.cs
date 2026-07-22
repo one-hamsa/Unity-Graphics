@@ -425,23 +425,26 @@ namespace UnityEngine.Rendering.HighDefinition
 
         int ComputeLUTHash(HDCamera hdCamera)
         {
-            return m_Tonemapping.GetHashCode() * 23 +
-                   m_WhiteBalance.GetHashCode() * 23 +
-                   m_ColorAdjustments.GetHashCode() * 23 +
-                   m_ChannelMixer.GetHashCode() * 23 +
-                   m_SplitToning.GetHashCode() * 23 +
-                   m_LiftGammaGain.GetHashCode() * 23 +
-                   m_ShadowsMidtonesHighlights.GetHashCode() * 23 +
-                   m_Curves.GetHashCode() * 23 +
-                   m_TonemappingFS.GetHashCode() * 23 +
-                   m_ColorGradingFS.GetHashCode() * 23 +
-                   HDROutputActiveForCameraType(hdCamera).GetHashCode()
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + m_Tonemapping.GetStateHash();
+                hash = hash * 23 + m_WhiteBalance.GetStateHash();
+                hash = hash * 23 + m_ColorAdjustments.GetStateHash();
+                hash = hash * 23 + m_ChannelMixer.GetStateHash();
+                hash = hash * 23 + m_SplitToning.GetStateHash();
+                hash = hash * 23 + m_LiftGammaGain.GetStateHash();
+                hash = hash * 23 + m_ShadowsMidtonesHighlights.GetStateHash();
+                hash = hash * 23 + m_Curves.GetStateHash();
+                hash = hash * 23 + m_TonemappingFS.GetHashCode();
+                hash = hash * 23 + m_ColorGradingFS.GetHashCode();
+                hash = hash * 23 + HDROutputActiveForCameraType(hdCamera).GetHashCode();
 #if UNITY_EDITOR
-                   * 23
-                   + m_ColorGradingSettings.space.GetHashCode() * 23 +
-                   + UnityEditor.PlayerSettings.hdrBitDepth.GetHashCode()
+                hash = hash * 23 + m_ColorGradingSettings.space.GetHashCode();
+                hash = hash * 23 + UnityEditor.PlayerSettings.hdrBitDepth.GetHashCode();
 #endif
-                   ;
+                return hash;
+            }
         }
 
         static void ValidateComputeBuffer(ref ComputeBuffer cb, int size, int stride, ComputeBufferType type = ComputeBufferType.Default)
@@ -4126,6 +4129,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             int ratio = (int)m_LensFlareScreenSpace.resolution.value;
             Color tintColor = m_LensFlareScreenSpace.tintColor.value;
+            int bloomMip = m_LensFlareScreenSpace.bloomMip.value;
 
             using (var builder = renderGraph.AddUnsafePass<LensFlareScreenSpaceData>("Lens Flare Screen Space", out var passData, ProfilingSampler.Get(HDProfileId.LensFlareScreenSpace)))
             {
@@ -4135,7 +4139,10 @@ namespace UnityEngine.Rendering.HighDefinition
                 passData.viewport = postProcessViewportSize;
                 passData.hdCamera = hdCamera;
                 passData.screenSpaceLensFlareBloomMipTexture = screenSpaceLensFlareBloomMipTexture;
-                builder.UseTexture(passData.screenSpaceLensFlareBloomMipTexture, AccessFlags.ReadWrite);
+                // NOTE: SSLF mip texture is usually the bloom.mip[N] and the BloomTexture is bloom.mip[0]. Sometimes N == 0 which causes double UseTexture error.
+                // Check if we are trying to use the same texture twice in the RG.
+                if(bloomMip != 0)
+                    builder.UseTexture(passData.screenSpaceLensFlareBloomMipTexture, AccessFlags.ReadWrite);
                 passData.originalBloomTexture = originalBloomTexture;
                 builder.UseTexture(passData.originalBloomTexture, AccessFlags.ReadWrite);
 

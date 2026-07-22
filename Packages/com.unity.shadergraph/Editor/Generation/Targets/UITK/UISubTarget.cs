@@ -110,6 +110,7 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
                     shaderFallback = "",
                     CanUseSpriteAtlas = "True",
                     generatesPreview = true,
+                    customTags = "\"isCustomUITKShader\"=\"true\"",
                     passes = new PassCollection(),
 
                 };
@@ -217,14 +218,31 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
             return "UISubTarget";
         }
 
+        const string kUVErrorMessageNode = "UI Material does not support UV1-7. Consider using 'UV0'.";
+        const string kUVErrorMessageSubGraph = "UI Material does not support UV1-7. Consider using 'UV0' in the subgraph.";
+
         public INodeValidationExtension.Status GetValidationStatus(AbstractMaterialNode node, out string msg)
         {
-            // Make sure node is in our graph first
             if (node.owner == null)
             {
                 msg = null;
                 return INodeValidationExtension.Status.None;
             }
+
+            if (!IsIUISubTarget(node))
+            {
+                msg = null;
+                return INodeValidationExtension.Status.None;
+            }
+
+            if (!HasUVMaterialSlotOrIsUVNode(node))
+            {
+                msg = null;
+                return INodeValidationExtension.Status.None;
+            }
+
+            node.owner.messageManager.ClearNodesFromProvider(node.owner, new[] { node });
+            node.owner.messageManager.ClearNodesFromProvider(this, new[] { node });
 
             foreach (var item in node.owner.activeTargets)
             {
@@ -234,16 +252,6 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
                     {
                         return INodeValidationExtension.Status.Warning;
                     }
-
-                    UVNode uvNode = node as UVNode;
-                    if (uvNode != null)
-                    {
-                        if (uvNode.uvChannel != UnityEditor.ShaderGraph.Internal.UVChannel.UV0)
-                        {
-                            msg = "UI Material does not support UV1-7. Consider using 'UV0'.";
-                            return INodeValidationExtension.Status.Warning;
-                        }
-                    }
                 }
             }
 
@@ -251,8 +259,53 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
             return INodeValidationExtension.Status.None;
         }
 
-        private bool ValidateUV(AbstractMaterialNode node, out string warningMessage)
+        static bool IsIUISubTarget(AbstractMaterialNode node)
         {
+            bool isIUISubTarget = false;
+            foreach (var target in node.owner.activeTargets)
+            {
+                var subTarget = target.activeSubTarget;
+                if (subTarget is IUISubTarget)
+                {
+                    isIUISubTarget = true;
+                    break;
+                }
+            }
+            return isIUISubTarget;
+        }
+
+        static bool HasUVMaterialSlotOrIsUVNode(AbstractMaterialNode node)
+        {
+            List<UVMaterialSlot> uvSlots = new();
+            node.GetInputSlots<UVMaterialSlot>(uvSlots);
+
+            if (uvSlots.Count > 0)
+            {
+                return true;
+            }
+
+            UVNode uvNode = node as UVNode;
+            if (uvNode != null)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        static bool ValidateUV(AbstractMaterialNode node, out string warningMessage)
+        {
+            if (!IsIUISubTarget(node))
+            {
+                warningMessage = null;
+                return false;
+            }
+
+            if (!HasUVMaterialSlotOrIsUVNode(node))
+            {
+                warningMessage = null;
+                return false;
+            }
+
             List<UVMaterialSlot> uvSlots = new();
             node.GetInputSlots<UVMaterialSlot>(uvSlots);
 
@@ -260,7 +313,17 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
             {
                 if (uvSlot.channel != UnityEditor.ShaderGraph.Internal.UVChannel.UV0)
                 {
-                    warningMessage = "UI Material does not support UV1-7. Consider using 'UV0'.";
+                    warningMessage = kUVErrorMessageNode;
+                    return true;
+                }
+            }
+
+            UVNode uvNode = node as UVNode;
+            if (uvNode != null)
+            {
+                if (uvNode.uvChannel != UnityEditor.ShaderGraph.Internal.UVChannel.UV0)
+                {
+                    warningMessage = kUVErrorMessageNode;
                     return true;
                 }
             }
@@ -282,7 +345,7 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
             {
                 if (uvSlot.channel != UnityEditor.ShaderGraph.Internal.UVChannel.UV0)
                 {
-                    warningMessage = "UI Material does not support UV1-7. Consider using 'UV0'.";
+                    warningMessage = kUVErrorMessageNode;
                     return true;
                 }
             }
@@ -302,7 +365,7 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
                     {
                         if (item != UnityEditor.ShaderGraph.Internal.UVChannel.UV0)
                         {
-                            warningMessage = "UI Material does not support UV1-7. Consider using 'UV0' in the subgraph.";
+                            warningMessage = kUVErrorMessageSubGraph;
                             return true;
                         }
                     }
@@ -406,6 +469,14 @@ namespace UnityEditor.Rendering.UITK.ShaderGraph
             StructFields.Varyings.texCoord1,
             StructFields.Varyings.texCoord3,
             StructFields.Varyings.texCoord4,
+
+            // uie_custom_frag always computes AA coverage and rect clipping from these, so they must be
+            // copied into SurfaceDescriptionInputs even when no graph node reads them. Otherwise they stay
+            // zero (a constant-color graph loses arc carving and edge AA) — the requiresUITK ConditionalFields
+            // in GenerationUtils only populate them when an IMayRequireUITK node happens to be present.
+            StructFields.SurfaceDescriptionInputs.typeTexSettings,
+            StructFields.SurfaceDescriptionInputs.circle,
+            StructFields.SurfaceDescriptionInputs.uvClip,
         };
     }
 #endregion

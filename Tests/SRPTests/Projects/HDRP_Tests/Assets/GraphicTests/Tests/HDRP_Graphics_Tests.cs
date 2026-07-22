@@ -54,6 +54,8 @@ namespace UnityEngine.Rendering.HighDefinition.Tests
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
+            // Standard resolution for backbuffer capture is 1080p
+            Screen.SetResolution(1920, 1080, true);
             SceneManager.LoadScene("GraphicsTestTransitionScene", LoadSceneMode.Single);
         }
 
@@ -325,17 +327,63 @@ namespace UnityEngine.Rendering.HighDefinition.Tests
         [IgnoreGraphicsTest(
             "4107_DRS-FSR2-Hardware",
             "Platform not supported", // FSR is DX12/DX11/Vulkan on PC-only
-            graphicsDeviceTypes: new[] { GraphicsDeviceType.Metal, GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.PlayStation4, GraphicsDeviceType.XboxOne, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.Switch, GraphicsDeviceType.XboxOneD3D12, GraphicsDeviceType.GameCoreXboxOne, GraphicsDeviceType.GameCoreXboxSeries, GraphicsDeviceType.PlayStation5, GraphicsDeviceType.PlayStation5NGGC, GraphicsDeviceType.WebGPU, GraphicsDeviceType.Switch2 }
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
         )]
         [IgnoreGraphicsTest(
             "4108_DRS-FSR2-Software",
             "Platform not supported", // FSR is DX12/DX11/Vulkan on PC-only
-            graphicsDeviceTypes: new[] { GraphicsDeviceType.Metal, GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.PlayStation4, GraphicsDeviceType.XboxOne, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.Switch, GraphicsDeviceType.XboxOneD3D12, GraphicsDeviceType.GameCoreXboxOne, GraphicsDeviceType.GameCoreXboxSeries, GraphicsDeviceType.PlayStation5, GraphicsDeviceType.PlayStation5NGGC, GraphicsDeviceType.WebGPU, GraphicsDeviceType.Switch2 }
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
         )]
         [IgnoreGraphicsTest(
             "4109_DRS-FSR2-AfterPost",
-            "Graphics devices type not supported", // FSR is DX12/DX11/Vulkan on PC-only
-            graphicsDeviceTypes: new[] { GraphicsDeviceType.Metal, GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.PlayStation4, GraphicsDeviceType.XboxOne, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.Switch, GraphicsDeviceType.XboxOneD3D12, GraphicsDeviceType.GameCoreXboxOne, GraphicsDeviceType.GameCoreXboxSeries, GraphicsDeviceType.PlayStation5, GraphicsDeviceType.PlayStation5NGGC, GraphicsDeviceType.WebGPU, GraphicsDeviceType.Switch2 }
+            "Platform not supported", // FSR is DX12/DX11/Vulkan on PC-only
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
+        )]
+        [IgnoreGraphicsTest(
+            "4110_DRS-FSR2-With-CustomPass",
+            "Platform not supported", // FSR is DX12/DX11/Vulkan on PC-only
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
+        )]
+        [IgnoreGraphicsTest(
+            "4088_DRS-DLSS-Hardware",
+            "Platform not supported", // DLSS is DX12/DX11/Vulkan on PC-only
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
+        )]
+        [IgnoreGraphicsTest(
+            "4089_DRS-DLSS-Software",
+            "Platform not supported", // DLSS is DX12/DX11/Vulkan on PC-only
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
+        )]
+        [IgnoreGraphicsTest(
+            "4103_DRS-DLSS-AfterPost",
+            "Platform not supported", // DLSS is DX12/DX11/Vulkan on PC-only
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
+        )]
+        [IgnoreGraphicsTest(
+            "4111_DRS-DLSS-With-CustomPass",
+            "Platform not supported", // DLSS is DX12/DX11/Vulkan on PC-only
+            isInclusive: true,
+            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan },
+            runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.WindowsPlayer }
+        )]
+        [IgnoreGraphicsTest(
+            "3006_TileCluster_Cluster$",
+            "https://jira.unity3d.com/browse/UUM-144350 - Localized tile/cluster artifact on NVIDIA A10 in the XR playmode job after the win11-22H2-x64-azure-nvidia image update. XR and non-XR share one reference image (xr-reuse-tests), so the ignore is scoped to DX11+WindowsEditor.",
+            GraphicsDeviceType.Direct3D11, RuntimePlatform.WindowsEditor
         )]
         public IEnumerator Run(SceneGraphicsTestCase testCase)
         {

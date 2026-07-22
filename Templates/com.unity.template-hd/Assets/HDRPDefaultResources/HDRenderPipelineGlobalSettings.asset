@@ -52,8 +52,6 @@ MonoBehaviour:
   lensAttenuationMode: 0
   colorGradingSpace: 0
   m_ObsoleteDiffusionProfileSettingsList:
-  - {fileID: 11400000, guid: 78322c7f82657514ebe48203160e3f39, type: 2}
-  - {fileID: 11400000, guid: 26bdddf49760c61438938733f07fa2a2, type: 2}
   - {fileID: 11400000, guid: 5a9a2dc462c7bde4f86d0615a19c2c72, type: 2}
   - {fileID: 11400000, guid: 2b7005ba3a4d8474b8cdc34141ad766e, type: 2}
   specularFade: 0
@@ -158,6 +156,7 @@ MonoBehaviour:
       sssCustomDownsampleSteps: 0
       msaaMode: 1
       materialQuality: 0
+  m_Version: 14
   m_Settings:
     m_SettingsList:
       m_List:
@@ -192,11 +191,13 @@ MonoBehaviour:
       - rid: 5053671556450091036
       - rid: 5053671556450091037
       - rid: 5053671556450091038
-      - rid: 5053671556450091039
       - rid: 5053671556450091040
-      - rid: 5053671556450091041
       - rid: 5053671556450091042
-      - rid: 4677160270076837892
+      - rid: 3247174754135965696
+      - rid: 3247174754135965697
+      - rid: 3247174754135965698
+      - rid: 3247174754135965699
+      - rid: 3247174754135965700
     m_RuntimeSettings:
       m_List: []
   renderingLayerNames:
@@ -243,11 +244,10 @@ MonoBehaviour:
       m_Keys:
       - 3db1837cc97a95e4c98610966fac2b0b
       m_Values: 01
-  m_Version: 14
   references:
     version: 2
     RefIds:
-    - rid: 4677160270076837892
+    - rid: 3247174754135965696
       type: {class: RayTracingRenderPipelineResources, ns: UnityEngine.Rendering.UnifiedRayTracing, asm: Unity.UnifiedRayTracing.Runtime}
       data:
         m_Version: 1
@@ -260,6 +260,46 @@ MonoBehaviour:
         m_BuildHlbvh: {fileID: 7200000, guid: 2d70cd6be91bd7843a39a54b51c15b13, type: 3}
         m_RestructureBvh: {fileID: 7200000, guid: 56641cb88dcb31a4398a4997ef7a7a8c, type: 3}
         m_Scatter: {fileID: 7200000, guid: a2eaeefdac4637a44b734e85b7be9186, type: 3}
+    - rid: 3247174754135965697
+      type: {class: ColorCheckerResources, ns: UnityEngine.Rendering.HighDefinition, asm: Unity.RenderPipelines.HighDefinition.Runtime}
+      data:
+        m_ColorCheckerMaterial: {fileID: 2100000, guid: 7a1044256d39dba4aa777255550527bf, type: 2}
+    - rid: 3247174754135965698
+      type: {class: VrsRenderPipelineRuntimeResources, ns: UnityEngine.Rendering, asm: Unity.RenderPipelines.Core.Runtime}
+      data:
+        m_TextureComputeShader: {fileID: 7200000, guid: cacb30de6c40c7444bbc78cb0a81fd2a, type: 3}
+        m_VisualizationShader: {fileID: 4800000, guid: 620b55b8040a88d468e94abe55bed5ba, type: 3}
+        m_VisualizationLookupTable:
+          m_Data:
+          - {r: 0.785, g: 0.23, b: 0.2, a: 1}
+          - {r: 1, g: 0.8, b: 0.8, a: 1}
+          - {r: 0.4, g: 0.2, b: 0.2, a: 1}
+          - {r: 0.51, g: 0.8, b: 0.6, a: 1}
+          - {r: 0.6, g: 0.8, b: 1, a: 1}
+          - {r: 0.2, g: 0.4, b: 0.6, a: 1}
+          - {r: 0.8, g: 1, b: 0.8, a: 1}
+          - {r: 0.2, g: 0.4, b: 0.2, a: 1}
+          - {r: 0.125, g: 0.22, b: 0.36, a: 1}
+        m_ConversionLookupTable:
+          m_Data:
+          - {r: 0.785, g: 0.23, b: 0.2, a: 1}
+          - {r: 1, g: 0.8, b: 0.8, a: 1}
+          - {r: 0.4, g: 0.2, b: 0.2, a: 1}
+          - {r: 0.51, g: 0.8, b: 0.6, a: 1}
+          - {r: 0.6, g: 0.8, b: 1, a: 1}
+          - {r: 0.2, g: 0.4, b: 0.6, a: 1}
+          - {r: 0.8, g: 1, b: 0.8, a: 1}
+          - {r: 0.2, g: 0.4, b: 0.2, a: 1}
+          - {r: 0.125, g: 0.22, b: 0.36, a: 1}
+    - rid: 3247174754135965699
+      type: {class: RenderingDebuggerRuntimeResources, ns: UnityEngine.Rendering, asm: Unity.RenderPipelines.Core.Runtime}
+      data:
+        m_version: 0
+    - rid: 3247174754135965700
+      type: {class: LightmapSamplingSettings, ns: UnityEngine.Rendering, asm: Unity.RenderPipelines.Core.Runtime}
+      data:
+        m_Version: 1
+        m_UseBicubicLightmapSampling: 0
     - rid: 5053671556450091008
       type: {class: HDRPRayTracingResources, ns: UnityEngine.Rendering.HighDefinition, asm: Unity.RenderPipelines.HighDefinition.Runtime}
       data:
@@ -849,11 +889,6 @@ MonoBehaviour:
       data:
         m_Version: 1
         m_ProbeVolumeDisableStreamingAssets: 0
-    - rid: 5053671556450091039
-      type: {class: LightmapSamplingSettings, ns: UnityEngine.Rendering, asm: Unity.RenderPipelines.Core.Runtime}
-      data:
-        m_Version: 1
-        m_UseBicubicLightmapSampling: 0
     - rid: 5053671556450091040
       type: {class: ShaderStrippingSetting, ns: UnityEngine.Rendering, asm: Unity.RenderPipelines.Core.Runtime}
       data:
@@ -861,33 +896,6 @@ MonoBehaviour:
         m_ExportShaderVariants: 1
         m_ShaderVariantLogLevel: 0
         m_StripRuntimeDebugShaders: 1
-    - rid: 5053671556450091041
-      type: {class: VrsRenderPipelineRuntimeResources, ns: UnityEngine.Rendering, asm: Unity.RenderPipelines.Core.Runtime}
-      data:
-        m_TextureComputeShader: {fileID: 7200000, guid: cacb30de6c40c7444bbc78cb0a81fd2a, type: 3}
-        m_VisualizationShader: {fileID: 4800000, guid: 620b55b8040a88d468e94abe55bed5ba, type: 3}
-        m_VisualizationLookupTable:
-          m_Data:
-          - {r: 1, g: 0, b: 0, a: 1}
-          - {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-          - {r: 1, g: 1, b: 1, a: 1}
-          - {r: 0, g: 1, b: 0, a: 1}
-          - {r: 0.75, g: 0.75, b: 0, a: 1}
-          - {r: 0, g: 0.75, b: 0.55, a: 1}
-          - {r: 0.5, g: 0, b: 0.5, a: 1}
-          - {r: 0.5, g: 0.5, b: 0.5, a: 1}
-          - {r: 0, g: 0, b: 1, a: 1}
-        m_ConversionLookupTable:
-          m_Data:
-          - {r: 1, g: 0, b: 0, a: 1}
-          - {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-          - {r: 1, g: 1, b: 1, a: 1}
-          - {r: 0, g: 1, b: 0, a: 1}
-          - {r: 0.75, g: 0.75, b: 0, a: 1}
-          - {r: 0, g: 0.75, b: 0.55, a: 1}
-          - {r: 0.5, g: 0, b: 0.5, a: 1}
-          - {r: 0.5, g: 0.5, b: 0.5, a: 1}
-          - {r: 0, g: 0, b: 1, a: 1}
     - rid: 5053671556450091042
       type: {class: RenderGraphUtilsResources, ns: UnityEngine.Rendering.RenderGraphModule.Util, asm: Unity.RenderPipelines.Core.Runtime}
       data:
