@@ -1,0 +1,8 @@
+# Shared LFS config (read automatically by git-lfs from the repo root).
+# UNDERDOGS consumes only the URP/core/shadergraph/VFX packages from this fork;
+# skip downloading LFS content the game never reads (test fixtures, docs,
+# samples, HDRP). Excluded files stay as harmless pointer stubs on disk —
+# Unity ignores Tests/ (outside the referenced packages) and ~-suffixed folders.
+# Override locally with: git config lfs.fetchexclude ""
+[lfs]
+	fetchexclude = Tests/**,TestProjects/**,Templates/**,com.unity.postprocessing/**,Packages/com.unity.render-pipelines.high-definition*/**,**/Documentation~/**,**/Samples~/**
