@@ -2599,7 +2599,13 @@ namespace UnityEngine.Rendering.Universal
             // If there is no camera to render in URP, SS UI overlay also has to be rendered in the engine
             if (XRSystem.displayActive || cameraCount == 0)
             {
-                SupportedRenderingFeatures.active.rendersUIOverlay = false;
+                // XXX: On Android XR there is no companion window, so the engine's after-URP overlay
+                // pass targets the eye swapchain itself. URP has already discarded the MSAA color at
+                // that point (noStoreOnlyResolveBBColor), so that pass loads undefined tile memory and
+                // re-resolves it over the finished frame, corrupting the swapchain. Keeping overlay
+                // ownership in URP prevents the engine from scheduling that pass at all.
+                SupportedRenderingFeatures.active.rendersUIOverlay =
+                    XRSystem.displayActive && Application.platform == RuntimePlatform.Android;
             }
             else
             {
