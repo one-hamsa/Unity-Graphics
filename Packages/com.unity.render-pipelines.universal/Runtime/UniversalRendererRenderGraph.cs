@@ -1540,7 +1540,10 @@ namespace UnityEngine.Rendering.Universal
 
             // We can explicitely render the overlay UI from URP when HDR output is not enabled.
             // SupportedRenderingFeatures.active.rendersUIOverlay should also be set to true.
-            bool shouldRenderUI = cameraData.rendersOverlayUI && cameraData.isLastBaseCamera;
+            // On XR, overlay UI is never rendered into the eye buffers: URP claims overlay
+            // ownership there purely to stop the engine's after-URP UI pass (see
+            // UniversalRenderPipeline.AdjustUIOverlayOwnership), so it must not draw it either.
+            bool shouldRenderUI = cameraData.rendersOverlayUI && cameraData.isLastBaseCamera && !cameraData.xr.enabled;
             bool outputToHDR = cameraData.isHDROutputActive;
             if (shouldRenderUI && !outputToHDR)
             {

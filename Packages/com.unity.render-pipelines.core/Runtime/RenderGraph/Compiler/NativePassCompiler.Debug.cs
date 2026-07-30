@@ -108,8 +108,20 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
                 case PassBreakReason.PassMergingDisabled:
                     message += "The pass merging is disabled.";
                     break;
+                case PassBreakReason.NotOptimized:
+                    message += "The native render pass optimizer never ran on this pass. The pass is standalone and not merged.";
+                    break;
+                case PassBreakReason.FRStateMismatch:
+                    message += $"{prevPassName} uses a different foveated rendering state than {passName}.";
+                    break;
+                case PassBreakReason.ExtendedFeatureFlagsIncompatible:
+                    message += $"{prevPassName} uses extended feature flags that are incompatible with {passName}.";
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    // Never throw here: this runs inside RenderGraph.Execute() when the Render Graph
+                    // Viewer is attached, and an exception resets the graph (black frame on device).
+                    message += PassBreakAudit.BreakReasonMessages[(int)mergeResult.reason];
+                    break;
             }
 
             return message;
