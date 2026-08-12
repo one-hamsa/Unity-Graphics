@@ -1483,6 +1483,10 @@ namespace UnityEngine.Rendering.Universal
 
             var cmd = renderingData.commandBuffer;
 
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+            GpuLabUrpHook.BeginPass(cmd, renderPass);
+#endif
+
             // Selectively enable foveated rendering
             if (cameraData.xr.supportsFoveatedRendering)
             {
@@ -1508,6 +1512,12 @@ namespace UnityEngine.Rendering.Universal
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
             }
+
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+            // rides cmd to the next flush; queue order still places the end timestamp
+            // after every command the pass recorded
+            GpuLabUrpHook.EndPass(cmd, renderPass);
+#endif
 
             if (cameraData.xr.enabled)
             {
