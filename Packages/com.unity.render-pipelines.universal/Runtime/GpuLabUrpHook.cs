@@ -21,9 +21,12 @@ namespace UnityEngine.Rendering.Universal
     {
         [DllImport("__Internal")] static extern uint il2cpplab_gpu_control();
         [DllImport("__Internal")] static extern IntPtr il2cpplab_gpu_span_sink();
+        [DllImport("__Internal")] static extern IntPtr il2cpplab_gpu_stats_sink();
+        [DllImport("__Internal")] static extern void il2cpplab_gpu_pass_meta(uint[] words, uint count);
         [DllImport("__Internal")] static extern uint perflab_marker_register(string name);
         [DllImport("__Internal")] static extern void il2cpplab_gpu_announce(uint flags);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_gpu_probe_set_sink(IntPtr sink);
+        [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_gpu_probe_set_stats_sink(IntPtr sink);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_gpu_probe_set_enabled(int enabled);
         [DllImport("il2cpplab_gpu_probe")] static extern IntPtr il2cpplab_gpu_probe_event_func();
 
@@ -53,7 +56,38 @@ namespace UnityEngine.Rendering.Universal
                 setupPending = false;
                 cmd.IssuePluginEventAndData(eventFunc, EventFrameSetup, Pack(0, frame));
             }
-            cmd.IssuePluginEventAndData(eventFunc, EventPassBegin, Pack(SiteOf(pass), frame));
+            uint site = SiteOf(pass);
+            EmitPassMeta(site, pass);
+            cmd.IssuePluginEventAndData(eventFunc, EventPassBegin, Pack(site, frame));
+        }
+
+        // A pass target's shape (dims/format/MSAA/depth), once per site when first seen
+        // or changed — the bandwidth context behind the pass's GPU time. Cleared when a
+        // capture (re)starts so every session carries its own copy.
+        static readonly uint[] metaWords = new uint[6];
+        static readonly Dictionary<uint, ulong> metaBySite = new Dictionary<uint, ulong>(64);
+
+        static void EmitPassMeta(uint site, ScriptableRenderPass pass)
+        {
+            if (site == 0)
+                return;
+            var handles = pass.colorAttachmentHandles;
+            var rt = handles != null && handles.Length > 0 ? handles[0]?.rt : null;
+            if (rt == null)
+                return; // backbuffer / camera-managed target: no descriptor to read
+            var d = rt.descriptor;
+            ulong packed = ((ulong)(uint)d.width << 42) ^ ((ulong)(uint)d.height << 20)
+                         ^ ((ulong)(uint)d.graphicsFormat << 6) ^ (uint)d.msaaSamples;
+            if (metaBySite.TryGetValue(site, out ulong prev) && prev == packed)
+                return;
+            metaBySite[site] = packed;
+            metaWords[0] = site;
+            metaWords[1] = (uint)d.width;
+            metaWords[2] = (uint)d.height;
+            metaWords[3] = (uint)d.graphicsFormat;
+            metaWords[4] = (uint)d.msaaSamples;
+            metaWords[5] = (uint)d.depthBufferBits;
+            il2cpplab_gpu_pass_meta(metaWords, 6);
         }
 
         public static void EndPass(CommandBuffer cmd, ScriptableRenderPass pass)
@@ -79,6 +113,8 @@ namespace UnityEngine.Rendering.Universal
             {
                 pluginEnabled = enabled;
                 il2cpplab_gpu_probe_set_enabled(enabled);
+                if (spansOn)
+                    metaBySite.Clear(); // a capture (re)started: re-emit every pass's meta
             }
             frameActive = spansOn;
             setupPending = spansOn;
@@ -91,6 +127,8 @@ namespace UnityEngine.Rendering.Universal
             {
                 eventFunc = il2cpplab_gpu_probe_event_func();
                 il2cpplab_gpu_probe_set_sink(il2cpplab_gpu_span_sink());
+                // per-pass pipeline statistics (D3D11 backend; the probe no-ops elsewhere)
+                il2cpplab_gpu_probe_set_stats_sink(il2cpplab_gpu_stats_sink());
                 il2cpplab_gpu_announce(0x2); // session_header.gpu_flags bit 1: pass spans
                 Debug.Log("[il2cpplab] gpu pass-span probe connected");
             }
