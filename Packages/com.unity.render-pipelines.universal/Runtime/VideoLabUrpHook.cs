@@ -15,9 +15,9 @@ namespace UnityEngine.Rendering.Universal
     /// ScriptableRenderer.Execute after the stack's last camera rendered; issues one
     /// VIDEO_CAPTURE plugin event carrying the capture source and the rendered viewport,
     /// handled by the il2cpplab_gpu_probe plugin (Vulkan blit / D3D11 mip-chain +
-    /// readback ring). The source is resolved per mode: the XR swapchain texture
-    /// (left eye) in VR, the camera's target texture or the backbuffer in No-VR
-    /// (VRPlugin_Manual test mode). Self-initializes on the first gated call and issues
+    /// readback ring). Only display-presenting cameras are captured: the XR swapchain
+    /// texture (left eye) in VR, the backbuffer in No-VR (VRPlugin_Manual test mode);
+    /// RT-targeted cameras never claim a frame. Self-initializes on the first gated call and issues
     /// zero events while no capture is active (one P/Invoke per frame decides that).
     /// There is no control.txt switch - the build flavor is the opt-in.
     /// </summary>
@@ -63,6 +63,13 @@ namespace UnityEngine.Rendering.Universal
             int frame = Time.frameCount;
             if (frame == lastFrame)
                 return;
+            // only the camera that presents to the display is "what the player sees".
+            // RT-targeted cameras (photo booth, previews, reflections) and non-final
+            // stack cameras must not claim the frame: capturing one alternates the
+            // encoder geometry with the screen's (the recorder keeps one geometry per
+            // session and drops the rest) and RT content reads y-flipped on D3D11.
+            if (!cameraData.resolveToScreen)
+                return;
             bool on = il2cpplab_video_control() != 0;
             if (on && !initTried)
                 Init();
@@ -97,18 +104,6 @@ namespace UnityEngine.Rendering.Universal
                 vpY = (int)vp.y;
                 vpW = (int)vp.width;
                 vpH = (int)vp.height;
-                flags = 0;
-            }
-            else if (cameraData.targetTexture != null)
-            {
-                RenderTexture rt = cameraData.targetTexture;
-                IntPtr tex = CachedNativePtr(rt);
-                if (tex == IntPtr.Zero)
-                    return;
-                handle = (long)tex;
-                texW = rt.width;
-                texH = rt.height;
-                vpX = 0; vpY = 0; vpW = texW; vpH = texH;
                 flags = 0;
             }
             else
