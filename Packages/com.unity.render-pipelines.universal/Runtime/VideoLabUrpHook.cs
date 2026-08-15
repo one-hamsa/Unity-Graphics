@@ -35,7 +35,11 @@ namespace UnityEngine.Rendering.Universal
         // must match gpulab_probe.cpp: kOpVideoCapture / VideoCaptureRequest layout
         const int EventVideoCapture = 4;
         const int RequestBytes = 40;
-        const int FlagRenderBuffer = 1; // handle is a UnityRenderBuffer (backbuffer path)
+        // No-VR backbuffer request: Vulkan resolves handle as a UnityRenderBuffer, D3D11
+        // ignores the handle and fetches the swapchain backbuffer on the render thread
+        // (a main-thread native pointer for the backbuffer is not an ID3D11Resource and
+        // dereferencing it crashes the render thread)
+        const int FlagBackbuffer = 1;
         // requests are read on the render thread up to a few frames later; 8 slots is
         // several frames of headroom at one request per frame
         const int RequestRing = 8;
@@ -110,15 +114,13 @@ namespace UnityEngine.Rendering.Universal
             else
             {
                 // No-VR (VRPlugin_Manual): the camera renders to the backbuffer; the
-                // probe resolves the RenderBuffer to its native texture on the render
-                // thread, so no pointer caching is needed here
+                // probe resolves it on the render thread (see FlagBackbuffer). The
+                // RenderBuffer handle is only meaningful to the Vulkan backend.
                 handle = (long)Display.main.colorBuffer.GetNativeRenderBufferPtr();
-                if (handle == 0)
-                    return;
                 texW = Display.main.renderingWidth;
                 texH = Display.main.renderingHeight;
                 vpX = 0; vpY = 0; vpW = texW; vpH = texH;
-                flags = FlagRenderBuffer;
+                flags = FlagBackbuffer;
             }
             lastFrame = frame;
 
