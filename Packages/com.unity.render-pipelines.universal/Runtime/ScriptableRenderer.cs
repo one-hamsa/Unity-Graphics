@@ -1249,6 +1249,13 @@ namespace UnityEngine.Rendering.Universal
                     ExecuteBlock(RenderPassBlock.AfterRendering, in renderBlocks, context, ref renderingData);
                 }
 
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_VIDEO && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+                // after the stack's last camera recorded its final pass, before the XR
+                // swapchain image is handed back: the frame's pixels are complete here.
+                // Works without XR too (No-VR test mode captures the backbuffer).
+                if (cameraData.resolveFinalTarget)
+                    VideoLabUrpHook.CaptureFrame(cmd, ref cameraData);
+#endif
                 EndXRRendering(cmd, context, ref renderingData.cameraData);
 
                 DrawWireOverlay(context, camera);
