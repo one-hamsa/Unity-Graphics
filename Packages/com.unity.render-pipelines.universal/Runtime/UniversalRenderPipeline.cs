@@ -2599,13 +2599,18 @@ namespace UnityEngine.Rendering.Universal
             // If there is no camera to render in URP, SS UI overlay also has to be rendered in the engine
             if (XRSystem.displayActive || cameraCount == 0)
             {
-                // XXX: must stay false while XR is active. This flag is a term in
-                // UniversalRendererRenderGraph's noStoreOnlyResolveBBColor: false short-circuits that
-                // condition before MSAA is consulted, true promotes msaaSamples > 1 to the deciding
-                // term and lets the imported eye swapchain be marked discard-on-last-use. Since
-                // bindMS is true on mobile Vulkan, the native pass compiler then picks DontCare
-                // rather than Resolve, throwing the whole eye render away.
-                SupportedRenderingFeatures.active.rendersUIOverlay = false;
+                // XXX: on Android XR this must stay true, and it is load-bearing in two places at once.
+                // Leaving overlay ownership with the engine (false) makes it schedule an after-URP
+                // overlay pass, which on a headset has no companion window to target and composites
+                // into the eye swapchain instead — colour corruption and black tiles across the view.
+                // Claiming ownership here stops that pass being scheduled; URP must then also skip
+                // drawing the overlay itself (see UniversalRendererRenderGraph's shouldRenderUI).
+                // The catch: this flag is a term in that file's noStoreOnlyResolveBBColor, where true
+                // promotes msaaSamples > 1 to the deciding term and would mark the imported eye
+                // swapchain discard-on-last-use — DontCare rather than Resolve, since bindMS is true
+                // on mobile Vulkan. That condition therefore excludes XR explicitly.
+                SupportedRenderingFeatures.active.rendersUIOverlay =
+                    XRSystem.displayActive && Application.platform == RuntimePlatform.Android;
             }
             else
             {

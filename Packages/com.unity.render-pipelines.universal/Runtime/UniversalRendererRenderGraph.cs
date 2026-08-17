@@ -1706,8 +1706,12 @@ namespace UnityEngine.Rendering.Universal
             bool isNativeUIOverlayRenderingAfterURP = !SupportedRenderingFeatures.active.rendersUIOverlay && cameraData.resolveToScreen;
             bool isNativeRenderingAfterURP = UnityEngine.Rendering.Watermark.IsVisible() || isNativeUIOverlayRenderingAfterURP;
             // If MSAA > 1, no extra native rendering after SRP and we target the BB directly (!m_RequiresIntermediateAttachments)
-            // then we can discard MSAA buffers and only resolve, otherwise we must store and resolve
-            bool noStoreOnlyResolveBBColor = !m_RequiresIntermediateAttachments && !isNativeRenderingAfterURP && (cameraData.cameraTargetDescriptor.msaaSamples > 1);
+            // then we can discard MSAA buffers and only resolve, otherwise we must store and resolve.
+            // XR is excluded: the target is an imported eye swapchain bound as a multisample texture
+            // (bindMS), and the native pass compiler answers discard-on-an-imported-bindMS-target with
+            // DontCare rather than Resolve, which throws the eye render away instead of resolving it.
+            bool noStoreOnlyResolveBBColor = !m_RequiresIntermediateAttachments && !isNativeRenderingAfterURP && (cameraData.cameraTargetDescriptor.msaaSamples > 1)
+                                            && !cameraData.xr.enabled;
 
             //Backbuffer orientation is used for either the actual backbuffer (not a texture), or in XR for the eye texture.
             bool useActualBackbufferOrienation = !cameraData.isSceneViewCamera && !cameraData.isPreviewCamera && cameraData.targetTexture == null;
