@@ -30,6 +30,9 @@ namespace UnityEngine.Rendering.Universal
         [DllImport("__Internal")] static extern void il2cpplab_gpu_announce(uint flags);
         [DllImport("__Internal")] static extern uint perflab_marker_register(string name);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_set_sink(IntPtr sink);
+        [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_path_stats(
+            out ulong reconstructed, out ulong blit, out ulong fallbacks,
+            out uint lastReason, out uint lastUsage);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_set_enabled(int enabled);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_set_site(uint site);
         [DllImport("il2cpplab_gpu_probe")] static extern IntPtr il2cpplab_gpu_probe_event_func();
@@ -60,6 +63,10 @@ namespace UnityEngine.Rendering.Universal
         static int pluginEnabled = -1; // last value pushed to the plugin; -1 = never
         static bool ffrSeen; // video_control bit 1 latched (see FlagSubsampled)
         static bool visRectReported; // the occlusion-mesh visible rect went to the recorder
+        static ulong lastBlitFrames;  // path-stats poll: blit count at the previous poll
+        static uint lastLoggedReason; // last fallback reason already logged (log per change)
+        static int pathPollCountdown = PathPollFrames;
+        const int PathPollFrames = 900; // ~10s at 90Hz; the poll is one P/Invoke
         static XRDisplaySubsystem display;
         static readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>(1);
         // each GetNativeTexturePtr may sync the render thread, so pointers are cached per
@@ -120,6 +127,23 @@ namespace UnityEngine.Rendering.Universal
                 flags = ffrSeen ? FlagSubsampled : 0;
                 if (!visRectReported)
                     ReportVisibleRect(ref cameraData);
+                // FFR frames must reconstruct; a growing blit count means artifacted
+                // video - surface the probe's reason in the session log
+                if (ffrSeen && --pathPollCountdown <= 0)
+                {
+                    pathPollCountdown = PathPollFrames;
+                    il2cpplab_video_probe_path_stats(out ulong rec, out ulong blit,
+                        out ulong falls, out uint reason, out uint usage);
+                    if (blit > lastBlitFrames && reason != lastLoggedReason)
+                    {
+                        lastLoggedReason = reason;
+                        Debug.LogWarning($"[il2cpplab] videolab FFR reconstruction degraded: " +
+                            $"{rec} reconstructed / {blit} blit frames, {falls} fallbacks, " +
+                            $"last reason {reason} (1 observe, 2 usage, 3 static-init, " +
+                            $"4 sized-init, 5 descriptor), usage 0x{usage:x}");
+                    }
+                    lastBlitFrames = blit;
+                }
             }
             else
             {
@@ -160,7 +184,11 @@ namespace UnityEngine.Rendering.Universal
             visRectReported = true;
             Mesh mesh = cameraData.xr.GetOcclusionMesh();
             if (mesh == null)
+            {
+                Debug.Log("[il2cpplab] videolab: no occlusion mesh on this XR setup - " +
+                          "visible rect not recorded, viewers show the full frame");
                 return;
+            }
             Vector3[] verts = mesh.vertices;
             int[] tris = mesh.triangles;
             const int Grid = 128;
