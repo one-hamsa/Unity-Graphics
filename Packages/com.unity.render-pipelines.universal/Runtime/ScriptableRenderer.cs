@@ -1129,6 +1129,12 @@ namespace UnityEngine.Rendering.Universal
             internal UniversalCameraData cameraData;
         };
 
+#if UNITY_ANDROID && !UNITY_EDITOR
+        static bool s_LoggedFoveationGateState;
+        static bool s_LastSupportsFoveatedRendering;
+        static bool s_LastCanFoveateIntermediatePasses;
+#endif
+
         internal void BeginRenderGraphXRRendering(RenderGraph renderGraph)
         {
 #if ENABLE_VR && ENABLE_XR_MODULE
@@ -1140,6 +1146,23 @@ namespace UnityEngine.Rendering.Universal
             // For untethered XR, intermediate pass' foveation is currenlty unsupported with non-default viewport.
             // Must be configured during the recording timeline before adding other XR intermediate passes.
             cameraData.xrUniversal.canFoveateIntermediatePasses = !PlatformAutoDetect.isXRMobile || isDefaultXRViewport;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // XXX: temporary stale-band diagnostics, logged at Error severity so the lines reach
+            // device reports. supportsFoveatedRendering tells us whether the SRP foveation path is
+            // live on device (foveatedRenderingInfo populated) or foveation is runtime/swapchain
+            // owned; canFoveateIntermediatePasses flipping marks the exact frame the viewport-scale
+            // foveation gate trips. Emits only on state transitions, so it cannot spam.
+            if (!s_LoggedFoveationGateState ||
+                cameraData.xr.supportsFoveatedRendering != s_LastSupportsFoveatedRendering ||
+                cameraData.xrUniversal.canFoveateIntermediatePasses != s_LastCanFoveateIntermediatePasses)
+            {
+                s_LoggedFoveationGateState = true;
+                s_LastSupportsFoveatedRendering = cameraData.xr.supportsFoveatedRendering;
+                s_LastCanFoveateIntermediatePasses = cameraData.xrUniversal.canFoveateIntermediatePasses;
+                Debug.LogError($"[XRDiag] URP-FR supportsFoveatedRendering={s_LastSupportsFoveatedRendering} canFoveateIntermediatePasses={s_LastCanFoveateIntermediatePasses} foveatedRenderingInfoIsNull={cameraData.xr.foveatedRenderingInfo == IntPtr.Zero} viewportScale={XRSystem.GetRenderViewportScale():F3} f={Time.frameCount}");
+            }
+#endif
 
             using (var builder = renderGraph.AddRasterRenderPass<BeginXRPassData>("BeginXRRendering", out var passData,
                 Profiling.beginXRRendering))
