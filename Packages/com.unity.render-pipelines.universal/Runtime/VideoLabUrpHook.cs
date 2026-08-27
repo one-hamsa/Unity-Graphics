@@ -26,10 +26,12 @@ namespace UnityEngine.Rendering.Universal
     {
         [DllImport("__Internal")] static extern uint il2cpplab_video_control();
         [DllImport("__Internal")] static extern IntPtr il2cpplab_video_sink();
+        [DllImport("__Internal")] static extern IntPtr il2cpplab_video_meta_sink();
         [DllImport("__Internal")] static extern void il2cpplab_video_visible_rect(uint x, uint y, uint w, uint h);
         [DllImport("__Internal")] static extern void il2cpplab_gpu_announce(uint flags);
         [DllImport("__Internal")] static extern uint perflab_marker_register(string name);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_set_sink(IntPtr sink);
+        [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_set_meta_sink(IntPtr sink);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_video_probe_path_stats(
             out ulong reconstructed, out ulong blit, out ulong fallbacks,
             out uint lastReason, out uint lastUsage);
@@ -284,6 +286,8 @@ namespace UnityEngine.Rendering.Universal
                     return;
                 }
                 il2cpplab_video_probe_set_sink(sink);
+                // per-frame capture-route diagnostics (VIDEO_PATH records in the capture)
+                il2cpplab_video_probe_set_meta_sink(il2cpplab_video_meta_sink());
                 // the capture's own GPU work shows as "videolab.capture" in the per-pass table
                 il2cpplab_video_probe_set_site(perflab_marker_register("videolab.capture"));
                 requests = Marshal.AllocHGlobal(RequestBytes * RequestRing);
