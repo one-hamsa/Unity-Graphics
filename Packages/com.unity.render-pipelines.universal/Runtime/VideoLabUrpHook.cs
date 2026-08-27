@@ -47,11 +47,11 @@ namespace UnityEngine.Rendering.Universal
         // (a main-thread native pointer for the backbuffer is not an ID3D11Resource and
         // dereferencing it crashes the render thread)
         const int FlagBackbuffer = 1;
-        // the eye swapchain is an FFR fragment-density-map image: the probe must sample-
-        // reconstruct it instead of blitting (a raw blit reads the tile-packed periphery
-        // as displaced blocks). Reported by the recorder (video_control bit 1) from the
-        // per-frame OVRPlugin FFR level, sticky here because the swapchain stays a
-        // density-map image even when dynamic FFR drops the level back to 0.
+        // capture this FFR frame through the probe's sample-reconstruction pass instead
+        // of the raw blit. Driven per frame by the recorder (video_control bit 1 =
+        // FFR seen AND profilerControl.txt "video_reconstruct 1"); the blit is the
+        // default - current Meta runtimes re-pack the swapchain on internal state
+        // changes the sampler does not track, so reconstruction degrades mid-session.
         const int FlagSubsampled = 2;
         // requests are read on the render thread up to a few frames later; 8 slots is
         // several frames of headroom at one request per frame
@@ -63,7 +63,7 @@ namespace UnityEngine.Rendering.Universal
         static int requestNext;
         static int lastFrame = -1;
         static int pluginEnabled = -1; // last value pushed to the plugin; -1 = never
-        static bool ffrSeen; // video_control bit 1 latched (see FlagSubsampled)
+        static bool reconstruct; // video_control bit 1 this frame (see FlagSubsampled)
         static bool visRectReported; // the occlusion-mesh visible rect went to the recorder
         static ulong lastBlitFrames;  // path-stats poll: blit count at the previous poll
         static uint lastLoggedReason; // last fallback reason already logged (log per change)
@@ -91,8 +91,7 @@ namespace UnityEngine.Rendering.Universal
                 return;
             uint control = il2cpplab_video_control();
             bool on = (control & 1) != 0;
-            if ((control & 2) != 0)
-                ffrSeen = true;
+            reconstruct = (control & 2) != 0;
             if (on && !initTried)
                 Init();
             if (eventFunc == IntPtr.Zero)
@@ -126,12 +125,12 @@ namespace UnityEngine.Rendering.Universal
                 vpY = (int)vp.y;
                 vpW = (int)vp.width;
                 vpH = (int)vp.height;
-                flags = ffrSeen ? FlagSubsampled : 0;
+                flags = reconstruct ? FlagSubsampled : 0;
                 if (!visRectReported)
                     ReportVisibleRect(ref cameraData);
-                // FFR frames must reconstruct; a growing blit count means artifacted
+                // reconstruction frames falling back to the blit mean artifacted
                 // video - surface the probe's reason in the session log
-                if (ffrSeen && --pathPollCountdown <= 0)
+                if (reconstruct && --pathPollCountdown <= 0)
                 {
                     pathPollCountdown = PathPollFrames;
                     il2cpplab_video_probe_path_stats(out ulong rec, out ulong blit,
