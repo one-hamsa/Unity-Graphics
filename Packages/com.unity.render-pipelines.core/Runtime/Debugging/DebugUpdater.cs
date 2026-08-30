@@ -21,9 +21,15 @@ namespace UnityEngine.Rendering
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void RuntimeInit()
         {
+#if DEVELOPMENT_ENV
+            UnityEngine.Debug.Log("[BOOT] AfterSceneLoad:63 DebugUpdater.RuntimeInit ENTER");
+#endif
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             if (DebugManager.instance.enableRuntimeUI)
                 EnableRuntime();
+#endif
+#if DEVELOPMENT_ENV
+            UnityEngine.Debug.Log("[BOOT] AfterSceneLoad:63 DebugUpdater.RuntimeInit EXIT");
 #endif
         }
 
