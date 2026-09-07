@@ -15,7 +15,10 @@ namespace UnityEngine.Rendering.RenderGraphModule
     /// il2cpplab_gpu_control() (`gpu_spans` in profilerControl.txt), and issues zero
     /// events while no capture is active.
     /// Pass identity is the pass's sampler name, interned through the perflab marker
-    /// table so the parser names spans for free.
+    /// table so the parser names spans for free. A site's first pass (and any later change)
+    /// also reports its color target's shape - dims / format / MSAA / depth - as pass
+    /// metadata, the bandwidth context behind the span; the D3D11 backend additionally
+    /// gets a per-pass pipeline-statistics sink.
     /// </summary>
     /// <remarks>
     /// This lives in core rather than in URP because render graph pass execution is a core
@@ -31,9 +34,12 @@ namespace UnityEngine.Rendering.RenderGraphModule
     {
         [DllImport("__Internal")] static extern uint il2cpplab_gpu_control();
         [DllImport("__Internal")] static extern IntPtr il2cpplab_gpu_span_sink();
+        [DllImport("__Internal")] static extern IntPtr il2cpplab_gpu_stats_sink();
+        [DllImport("__Internal")] static extern void il2cpplab_gpu_pass_meta(uint[] words, uint count);
         [DllImport("__Internal")] static extern uint perflab_marker_register(string name);
         [DllImport("__Internal")] static extern void il2cpplab_gpu_announce(uint flags);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_gpu_probe_set_sink(IntPtr sink);
+        [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_gpu_probe_set_stats_sink(IntPtr sink);
         [DllImport("il2cpplab_gpu_probe")] static extern void il2cpplab_gpu_probe_set_enabled(int enabled);
         [DllImport("il2cpplab_gpu_probe")] static extern IntPtr il2cpplab_gpu_probe_event_func();
 
@@ -67,7 +73,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             EmitSetupIfPending(cmd);
         }
 
-        public static void BeginPass(CommandBuffer cmd, RenderGraphPass pass)
+        public static void BeginPass(CommandBuffer cmd, RenderGraphPass pass, RenderGraphResourceRegistry resources)
         {
             // render graph's immediateMode executes passes while recording, before
             // FrameSetup runs, so the gate cannot rely on having been primed
@@ -76,7 +82,9 @@ namespace UnityEngine.Rendering.RenderGraphModule
             if (!frameActive)
                 return;
             EmitSetupIfPending(cmd);
-            cmd.IssuePluginEventAndData(eventFunc, EventPassBegin, Pack(SiteOf(pass), lastGateFrame));
+            uint site = SiteOf(pass);
+            EmitPassMeta(site, pass, resources);
+            cmd.IssuePluginEventAndData(eventFunc, EventPassBegin, Pack(site, lastGateFrame));
         }
 
         public static void EndPass(CommandBuffer cmd, RenderGraphPass pass)
@@ -92,6 +100,46 @@ namespace UnityEngine.Rendering.RenderGraphModule
                 return;
             setupPending = false;
             cmd.IssuePluginEventAndData(eventFunc, EventFrameSetup, Pack(0, lastGateFrame));
+        }
+
+        // A pass's color target shape (dims/format/MSAA/depth), once per site when first
+        // seen or changed - the bandwidth context behind the pass's GPU time. Cleared when
+        // a capture (re)starts so every session carries its own copy.
+        static readonly uint[] metaWords = new uint[6];
+        static readonly Dictionary<uint, ulong> metaBySite = new Dictionary<uint, ulong>(64);
+
+        static void EmitPassMeta(uint site, RenderGraphPass pass, RenderGraphResourceRegistry resources)
+        {
+            if (site == 0 || resources == null || pass.colorBufferMaxIndex < 0)
+                return;
+            TextureHandle handle = pass.colorBufferAccess[0].textureHandle;
+            if (!handle.IsValid())
+                return;
+            RTHandle target;
+            try
+            {
+                target = resources.GetTexture(handle);
+            }
+            catch (InvalidOperationException)
+            {
+                return; // released or not yet created: nothing to describe
+            }
+            RenderTexture rt = target?.rt;
+            if (rt == null)
+                return; // imported / backbuffer target: no descriptor to read
+            var d = rt.descriptor;
+            ulong packed = ((ulong)(uint)d.width << 42) ^ ((ulong)(uint)d.height << 20)
+                         ^ ((ulong)(uint)d.graphicsFormat << 6) ^ (uint)d.msaaSamples;
+            if (metaBySite.TryGetValue(site, out ulong prev) && prev == packed)
+                return;
+            metaBySite[site] = packed;
+            metaWords[0] = site;
+            metaWords[1] = (uint)d.width;
+            metaWords[2] = (uint)d.height;
+            metaWords[3] = (uint)d.graphicsFormat;
+            metaWords[4] = (uint)d.msaaSamples;
+            metaWords[5] = (uint)d.depthBufferBits;
+            il2cpplab_gpu_pass_meta(metaWords, 6);
         }
 
         static void GateFrame(int frame)
@@ -111,6 +159,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
             {
                 pluginEnabled = enabled;
                 il2cpplab_gpu_probe_set_enabled(enabled);
+                if (spansOn)
+                    metaBySite.Clear(); // a capture (re)started: re-emit every pass's meta
             }
             frameActive = spansOn;
             setupPending = spansOn;
@@ -123,6 +173,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
             {
                 eventFunc = il2cpplab_gpu_probe_event_func();
                 il2cpplab_gpu_probe_set_sink(il2cpplab_gpu_span_sink());
+                // per-pass pipeline statistics (D3D11 backend; the probe no-ops elsewhere)
+                il2cpplab_gpu_probe_set_stats_sink(il2cpplab_gpu_stats_sink());
                 il2cpplab_gpu_announce(0x2); // session_header.gpu_flags bit 1: pass spans
                 Debug.Log("[il2cpplab] gpu pass-span probe connected");
             }

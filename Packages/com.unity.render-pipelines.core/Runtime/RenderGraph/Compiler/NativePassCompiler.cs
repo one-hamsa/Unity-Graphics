@@ -1958,7 +1958,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             using (new ProfilingScope(rgContext.cmd, pass.customSampler))
             {
 #if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
-                GpuLabRenderGraphHook.BeginPass(rgContext.cmd, pass);
+                GpuLabRenderGraphHook.BeginPass(rgContext.cmd, pass, resources);
 #endif
                 pass.Execute(rgContext);
 

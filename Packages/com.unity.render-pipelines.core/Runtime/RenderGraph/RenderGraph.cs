@@ -2605,7 +2605,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
                         m_RenderGraphContext.executingPass = pass;
                         PreRenderPassExecute(passInfo, pass, m_RenderGraphContext);
 #if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
-                        GpuLabRenderGraphHook.BeginPass(m_RenderGraphContext.cmd, pass);
+                        GpuLabRenderGraphHook.BeginPass(m_RenderGraphContext.cmd, pass, m_Resources);
 #endif
                         pass.Execute(m_RenderGraphContext);
 #if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)

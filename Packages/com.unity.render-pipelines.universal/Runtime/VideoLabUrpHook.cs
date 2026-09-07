@@ -15,12 +15,12 @@ namespace UnityEngine.Rendering.Universal
     /// ScriptableRenderer.FinishRenderGraphRendering once the stack's final camera has
     /// executed its render graph; issues one VIDEO_CAPTURE plugin event carrying the
     /// capture source and the rendered viewport, handled by the il2cpplab_gpu_probe
-    /// plugin (Vulkan blit / D3D11 mip-chain + readback ring). The source is resolved
-    /// per mode: the XR swapchain texture (left eye) in VR, the camera's target texture
-    /// or the backbuffer in No-VR (VRPlugin_Manual test mode). Self-initializes on the
-    /// first gated call and issues zero events while no capture is active (one P/Invoke
-    /// per frame decides that). There is no profilerControl.txt switch - the build
-    /// flavor is the opt-in.
+    /// plugin (Vulkan blit / D3D11 mip-chain + readback ring). Only display-presenting
+    /// cameras are captured: the XR swapchain texture (left eye) in VR, the backbuffer in
+    /// No-VR (VRPlugin_Manual test mode); RT-targeted cameras never claim a frame.
+    /// Self-initializes on the first gated call and issues zero events while no capture
+    /// is active (one P/Invoke per frame decides that). There is no profilerControl.txt
+    /// switch - the build flavor is the opt-in.
     /// </summary>
     /// <remarks>
     /// The swapchain is resolved through <see cref="XRSystem.GetActiveDisplay"/>, the same
@@ -41,7 +41,11 @@ namespace UnityEngine.Rendering.Universal
         // must match gpulab_probe.cpp: kOpVideoCapture / VideoCaptureRequest layout
         const int EventVideoCapture = 4;
         const int RequestBytes = 40;
-        const int FlagRenderBuffer = 1; // handle is a UnityRenderBuffer (backbuffer path)
+        // No-VR backbuffer request: Vulkan resolves handle as a UnityRenderBuffer, D3D11
+        // ignores the handle and fetches the swapchain backbuffer on the render thread
+        // (a main-thread native pointer for the backbuffer is not an ID3D11Resource and
+        // dereferencing it crashes the render thread)
+        const int FlagBackbuffer = 1;
         // requests are read on the render thread up to a few frames later; 8 slots is
         // several frames of headroom at one request per frame
         const int RequestRing = 8;
@@ -62,6 +66,13 @@ namespace UnityEngine.Rendering.Universal
         {
             int frame = Time.frameCount;
             if (frame == lastFrame)
+                return;
+            // only the camera that presents to the display is "what the player sees".
+            // RT-targeted cameras (photo booth, previews, reflections) and non-final
+            // stack cameras must not claim the frame: capturing one alternates the
+            // encoder geometry with the screen's (the recorder keeps one geometry per
+            // session and drops the rest) and RT content reads y-flipped on D3D11.
+            if (!cameraData.resolveToScreen)
                 return;
             bool on = il2cpplab_video_control() != 0;
             if (on && !initTried)
@@ -99,30 +110,16 @@ namespace UnityEngine.Rendering.Universal
                 vpH = (int)vp.height;
                 flags = 0;
             }
-            else if (cameraData.targetTexture != null)
-            {
-                RenderTexture rt = cameraData.targetTexture;
-                IntPtr tex = CachedNativePtr(rt);
-                if (tex == IntPtr.Zero)
-                    return;
-                handle = (long)tex;
-                texW = rt.width;
-                texH = rt.height;
-                vpX = 0; vpY = 0; vpW = texW; vpH = texH;
-                flags = 0;
-            }
             else
             {
                 // No-VR (VRPlugin_Manual): the camera renders to the backbuffer; the
-                // probe resolves the RenderBuffer to its native texture on the render
-                // thread, so no pointer caching is needed here
+                // probe resolves it on the render thread (see FlagBackbuffer). The
+                // RenderBuffer handle is only meaningful to the Vulkan backend.
                 handle = (long)Display.main.colorBuffer.GetNativeRenderBufferPtr();
-                if (handle == 0)
-                    return;
                 texW = Display.main.renderingWidth;
                 texH = Display.main.renderingHeight;
                 vpX = 0; vpY = 0; vpW = texW; vpH = texH;
-                flags = FlagRenderBuffer;
+                flags = FlagBackbuffer;
             }
             lastFrame = frame;
 
