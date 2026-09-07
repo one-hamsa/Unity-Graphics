@@ -1746,6 +1746,12 @@ namespace UnityEngine.Rendering.RenderGraphModule
                     // Feeding Render Graph Viewer before resource deallocation at pass execution
                     GenerateDebugData(graphHash);
 #endif
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+                // before either execution path, so the probe's query-pool reset lands
+                // outside any render pass
+                GpuLabRenderGraphHook.FrameSetup(m_RenderGraphContext.cmd);
+#endif
+
                 if (nativeRenderPassesEnabled)
                     ExecuteNativeRenderGraph();
                 else
@@ -2598,7 +2604,15 @@ namespace UnityEngine.Rendering.RenderGraphModule
                     {
                         m_RenderGraphContext.executingPass = pass;
                         PreRenderPassExecute(passInfo, pass, m_RenderGraphContext);
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+                        GpuLabRenderGraphHook.BeginPass(m_RenderGraphContext.cmd, pass);
+#endif
                         pass.Execute(m_RenderGraphContext);
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+                        // rides cmd to the next flush; queue order still places the end
+                        // timestamp after every command the pass recorded
+                        GpuLabRenderGraphHook.EndPass(m_RenderGraphContext.cmd, pass);
+#endif
                         PostRenderPassExecute(ref passInfo, pass, m_RenderGraphContext);
                     }
                 }

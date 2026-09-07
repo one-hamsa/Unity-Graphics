@@ -1957,12 +1957,20 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
             using (new ProfilingScope(rgContext.cmd, pass.customSampler))
             {
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+                GpuLabRenderGraphHook.BeginPass(rgContext.cmd, pass);
+#endif
                 pass.Execute(rgContext);
 
                 foreach (var tex in pass.setGlobalsList)
                 {
                     rgContext.cmd.SetGlobalTexture(tex.Item2, tex.Item1);
                 }
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_GPU && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+                // rides cmd to the next flush; queue order still places the end timestamp
+                // after every command the pass recorded
+                GpuLabRenderGraphHook.EndPass(rgContext.cmd, pass);
+#endif
             }
         }
 

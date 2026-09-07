@@ -1310,6 +1310,13 @@ namespace UnityEngine.Rendering.Universal
         {
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
             OnFinishRenderGraphRendering(cmd);
+#if IL2CPPLAB_CAPTURE && IL2CPPLAB_VIDEO && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+            // the stack's last camera has executed its graph and the XR swapchain image is
+            // not handed back yet: the frame's pixels are complete here.
+            // Works without XR too (No-VR test mode captures the backbuffer).
+            if (cameraData.resolveFinalTarget)
+                VideoLabUrpHook.CaptureFrame(cmd, cameraData);
+#endif
             InternalFinishRenderingCommon(cmd, cameraData.resolveFinalTarget);
         }
 
