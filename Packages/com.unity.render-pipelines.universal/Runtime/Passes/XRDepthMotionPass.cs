@@ -19,6 +19,13 @@ namespace UnityEngine.Rendering.Universal
         private TextureHandle xrMotionVectorDepth;
         private bool m_XRSpaceWarpRightHandedNDC;
 
+        // UNDERDOGS debug switches (DebugConfigMenu). Default values are stock URP behavior.
+        // When false, only renderers the engine flags as moving are drawn, like the pre-6.3
+        // Oculus fork; static geometry then gets no depth and no object motion vectors.
+        public static bool forceAllMotionVectorObjects = true;
+        // Negates the y-sign convention passed to the motion vector shaders.
+        public static bool invertSpaceWarpNDCModifier = false;
+
         /// <summary>
         /// Creates a new <c>XRDepthMotionPass</c> instance.
         /// </summary>
@@ -81,7 +88,7 @@ namespace UnityEngine.Rendering.Universal
             // URP current' doesn't support this, missing motion override for transparent materials.
             var filteringSettings = new FilteringSettings(RenderQueueRange.all, camera.cullingMask);
             // Also render game objects that are not moved since last frame to save depth prepass requirement for camera motion.
-            filteringSettings.forceAllMotionVectorObjects = true;
+            filteringSettings.forceAllMotionVectorObjects = forceAllMotionVectorObjects;
             var renderStateBlock = new RenderStateBlock(RenderStateMask.Nothing);
 
             RenderingUtils.CreateRendererListWithRenderStateBlock(renderGraph, ref cullResults, objectMotionDrawingSettings, filteringSettings, renderStateBlock, ref passData.objMotionRendererList);
@@ -223,7 +230,10 @@ namespace UnityEngine.Rendering.Universal
 
                     // SpaceWarp is only available on Vulkan, so these values are always true. This is to support 2 versions of spacewarp
                     // One expects OpenGL NDC space motion vectors, the other expects Vulkan NDC space
-                    context.cmd.SetGlobalFloat(k_SpaceWarpNDCModifier, m_XRSpaceWarpRightHandedNDC ? -1.0f : 1.0f);
+                    float ndcModifier = m_XRSpaceWarpRightHandedNDC ? -1.0f : 1.0f;
+                    if (invertSpaceWarpNDCModifier)
+                        ndcModifier = -ndcModifier;
+                    context.cmd.SetGlobalFloat(k_SpaceWarpNDCModifier, ndcModifier);
 
                     // Object Motion for both static and dynamic objects, fill stencil for mv filled pixels.
                     context.cmd.DrawRendererList(passData.objMotionRendererList);
