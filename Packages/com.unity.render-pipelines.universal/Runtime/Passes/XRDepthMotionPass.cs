@@ -25,6 +25,10 @@ namespace UnityEngine.Rendering.Universal
         public static bool forceAllMotionVectorObjects = true;
         // Negates the y-sign convention passed to the motion vector shaders.
         public static bool invertSpaceWarpNDCModifier = false;
+        // When false, pixels without an object motion vector keep the cleared zero velocity
+        // instead of the fullscreen camera-motion fill; the pre-6.3 Oculus fork had no fill.
+        // The fill assumes static world geometry, which is wrong for camera-attached UI.
+        public static bool cameraMotionFill = true;
 
         /// <summary>
         /// Creates a new <c>XRDepthMotionPass</c> instance.
@@ -239,7 +243,8 @@ namespace UnityEngine.Rendering.Universal
                     context.cmd.DrawRendererList(passData.objMotionRendererList);
 
                     // Fill mv texturew with camera motion for pixels that don't have mv stencil bit.
-                    context.cmd.DrawProcedural(Matrix4x4.identity, data.xrMotionVector, 0, MeshTopology.Triangles, 3, 1);
+                    if (cameraMotionFill)
+                        context.cmd.DrawProcedural(Matrix4x4.identity, data.xrMotionVector, 0, MeshTopology.Triangles, 3, 1);
                 });
             }
         }
