@@ -29,6 +29,26 @@ namespace UnityEngine.Rendering.Universal
         // instead of the fullscreen camera-motion fill; the pre-6.3 Oculus fork had no fill.
         // The fill assumes static world geometry, which is wrong for camera-attached UI.
         public static bool cameraMotionFill = true;
+        // When true, the previous view-projection comes from the XR runtime's previous view
+        // matrix (like the pre-6.3 Oculus fork) instead of this pass's own copy of last
+        // frame's camera view. The two differ by app-space (rig) motion, which the runtime
+        // also applies through appSpaceDeltaPose.
+        public static bool useXRPrevViewMatrix = false;
+
+        // Last observed pass state, for diagnostics (see DescribeState).
+        static bool s_lastPrevViewValid;
+        static GraphicsFormat s_lastDepthStencilFormat;
+        static GraphicsFormat s_lastColorFormat;
+        static bool s_lastRightHandedNDC;
+        static int s_lastWidth, s_lastHeight;
+        static bool s_stateLogged;
+
+        public static string DescribeState()
+        {
+            return $"XRDepthMotionPass: target {s_lastWidth}x{s_lastHeight} color={s_lastColorFormat} depth={s_lastDepthStencilFormat} " +
+                   $"rightHandedNDC={s_lastRightHandedNDC} prevViewValid={s_lastPrevViewValid} " +
+                   $"forceAll={forceAllMotionVectorObjects} invertNDC={invertSpaceWarpNDCModifier} cameraFill={cameraMotionFill} useXRPrevView={useXRPrevViewMatrix}";
+        }
 
         /// <summary>
         /// Creates a new <c>XRDepthMotionPass</c> instance.
@@ -179,6 +199,18 @@ namespace UnityEngine.Rendering.Universal
             xrMotionVectorDepth = renderGraph.ImportTexture(m_XRMotionVectorDepth, importInfoDepth, importMotionDepthParams);
 
             m_XRSpaceWarpRightHandedNDC = cameraData.xr.spaceWarpRightHandedNDC;
+
+            s_lastRightHandedNDC = m_XRSpaceWarpRightHandedNDC;
+            s_lastDepthStencilFormat = importInfoDepth.format;
+            s_lastColorFormat = importInfo.format;
+            s_lastWidth = importInfo.width;
+            s_lastHeight = importInfo.height;
+            s_lastPrevViewValid = cameraData.xr.GetPrevViewValid(0);
+            if (!s_stateLogged)
+            {
+                s_stateLogged = true;
+                Debug.Log(DescribeState());
+            }
         }
 
 #region Recording
@@ -279,8 +311,16 @@ namespace UnityEngine.Rendering.Universal
                     var gpuVP1 = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrixNoJitter(1), renderIntoTexture: false) * cameraData.GetViewMatrix(1);
                     var xr = cameraData.xr;
                     var viewStartIndex = xr.viewCount * xr.multipassId;
-                    m_PreviousViewProjection[viewStartIndex] = m_ViewProjection[viewStartIndex];
-                    m_PreviousViewProjection[viewStartIndex + 1] = m_ViewProjection[viewStartIndex + 1];
+                    if (useXRPrevViewMatrix && xr.GetPrevViewValid(0) && xr.GetPrevViewValid(1))
+                    {
+                        m_PreviousViewProjection[viewStartIndex] = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrixNoJitter(0), renderIntoTexture: false) * xr.GetPrevViewMatrix(0);
+                        m_PreviousViewProjection[viewStartIndex + 1] = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrixNoJitter(1), renderIntoTexture: false) * xr.GetPrevViewMatrix(1);
+                    }
+                    else
+                    {
+                        m_PreviousViewProjection[viewStartIndex] = m_ViewProjection[viewStartIndex];
+                        m_PreviousViewProjection[viewStartIndex + 1] = m_ViewProjection[viewStartIndex + 1];
+                    }
                     m_ViewProjection[viewStartIndex] = gpuVP0;
                     m_ViewProjection[viewStartIndex + 1] = gpuVP1;
                 }
