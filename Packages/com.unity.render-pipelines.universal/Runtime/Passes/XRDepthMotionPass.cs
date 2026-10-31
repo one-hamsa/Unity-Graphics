@@ -7,27 +7,36 @@ namespace UnityEngine.Rendering.Universal
 {
     /// <summary>
     /// Render all objects that have a 'XRMotionVectors' pass into the given depth buffer and motionvec buffer.
+    /// When the eye texture depth is valid (XR depth submission), it is copied into the motion vector depth together
+    /// with per-pixel camera motion, and only objects that moved are drawn on top.
     /// </summary>
     public class XRDepthMotionPass : ScriptableRenderPass
     {
         public const string k_MotionOnlyShaderTagIdName = "XRMotionVectors";
         private static readonly ShaderTagId k_MotionOnlyShaderTagId = new ShaderTagId(k_MotionOnlyShaderTagIdName);
         private static readonly int k_SpaceWarpNDCModifier = Shader.PropertyToID("_SpaceWarpNDCModifier");
+        private static readonly int k_XRDepthTextureNameID = Shader.PropertyToID("_XRDepthTexture");
+        private static readonly int k_XRDepthTextureScaleBiasNameID = Shader.PropertyToID("_XRDepthTexture_ST");
+        private const int k_CameraMotionShaderPass = 0;
+        private const int k_DepthCopyShaderPass = 1;
+        private LocalKeyword m_SubsampleDepthKeyword;
         private RTHandle m_XRMotionVectorColor;
         private TextureHandle xrMotionVectorColor;
         private RTHandle m_XRMotionVectorDepth;
         private TextureHandle xrMotionVectorDepth;
         private bool m_XRSpaceWarpRightHandedNDC;
 
-        // UNDERDOGS debug switches (DebugConfigMenu). Default values are stock URP behavior.
-        // When false, only renderers the engine flags as moving are drawn, like the pre-6.3
-        // Oculus fork; static geometry then gets no depth and no object motion vectors.
-        public static bool forceAllMotionVectorObjects = true;
+        // UNDERDOGS debug switches (DebugConfigMenu).
+        // When false, valid eye depth is ignored: every object is drawn and the camera-motion fill runs,
+        // like stock URP.
+        public static bool useEyeDepthCopy = true;
+        // When true, objects that did not move are drawn on top of the copied eye depth as well.
+        // Without eye depth every object is always drawn.
+        public static bool forceAllMotionVectorObjects = false;
         // Negates the y-sign convention passed to the motion vector shaders.
         public static bool invertSpaceWarpNDCModifier = false;
-        // When false, pixels without an object motion vector keep the cleared zero velocity
-        // instead of the fullscreen camera-motion fill; the pre-6.3 Oculus fork had no fill.
-        // The fill assumes static world geometry, which is wrong for camera-attached UI.
+        // Without eye depth only: when false, pixels without an object motion vector keep the cleared
+        // zero velocity instead of the fullscreen camera-motion fill. The fill is drawn at the far plane.
         public static bool cameraMotionFill = true;
         // When true, the previous view-projection comes from the XR runtime's previous view
         // matrix (like the pre-6.3 Oculus fork) instead of this pass's own copy of last
@@ -41,13 +50,18 @@ namespace UnityEngine.Rendering.Universal
         static GraphicsFormat s_lastColorFormat;
         static bool s_lastRightHandedNDC;
         static int s_lastWidth, s_lastHeight;
+        static int s_lastEyeWidth, s_lastEyeHeight;
+        static bool s_lastCopyDepth;
+        static bool s_lastEyeDepthCopied;
+        static bool s_lastSubsampleDepth;
         static bool s_stateLogged;
 
         public static string DescribeState()
         {
             return $"XRDepthMotionPass: target {s_lastWidth}x{s_lastHeight} color={s_lastColorFormat} depth={s_lastDepthStencilFormat} " +
+                   $"eye {s_lastEyeWidth}x{s_lastEyeHeight} xrCopyDepth={s_lastCopyDepth} eyeDepthCopied={s_lastEyeDepthCopied} subsampleDepth={s_lastSubsampleDepth} " +
                    $"rightHandedNDC={s_lastRightHandedNDC} prevViewValid={s_lastPrevViewValid} " +
-                   $"forceAll={forceAllMotionVectorObjects} invertNDC={invertSpaceWarpNDCModifier} cameraFill={cameraMotionFill} useXRPrevView={useXRPrevViewMatrix}";
+                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} invertNDC={invertSpaceWarpNDCModifier} cameraFill={cameraMotionFill} useXRPrevView={useXRPrevViewMatrix}";
         }
 
         /// <summary>
@@ -66,6 +80,7 @@ namespace UnityEngine.Rendering.Universal
             m_XRMotionVectorColor = null;
             xrMotionVectorDepth = TextureHandle.nullHandle;
             m_XRMotionVectorDepth = null;
+            m_SubsampleDepthKeyword = new LocalKeyword(xrMotionVector, "_SUBSAMPLE_DEPTH");
         }
 
         private const int k_XRViewCountPerPass = 2;
@@ -75,6 +90,13 @@ namespace UnityEngine.Rendering.Universal
             internal Matrix4x4[] previousViewProjectionStereo = new Matrix4x4[k_XRViewCountPerPass];
             internal Matrix4x4[] viewProjectionStereo = new Matrix4x4[k_XRViewCountPerPass];
             internal Material xrMotionVector;
+            internal bool hasValidXRDepth;
+            internal TextureHandle xrDepthSrc;
+            internal UniversalCameraData cameraData;
+            internal bool requiresSubsampleDepth;
+            internal LocalKeyword subsampleDepthKeyword;
+            internal float ndcModifier;
+            internal bool drawCameraMotionFill;
         }
 
         ///  View projection data
@@ -104,15 +126,14 @@ namespace UnityEngine.Rendering.Universal
             return drawingSettings;
         }
 
-        private void InitObjectMotionRendererLists(ref PassData passData, ref CullingResults cullResults, RenderGraph renderGraph, Camera camera)
+        private void InitObjectMotionRendererLists(ref PassData passData, ref CullingResults cullResults, RenderGraph renderGraph, Camera camera, bool drawAllObjects)
         {
             var objectMotionDrawingSettings = GetObjectMotionDrawingSettings(camera);
 
-            // XRTODO: Extend RenderQueueRange.all to support transparent objects?
-            // URP current' doesn't support this, missing motion override for transparent materials.
+            // Draw motion vectors for all objects with matching shaders, including transparent
             var filteringSettings = new FilteringSettings(RenderQueueRange.all, camera.cullingMask);
             // Also render game objects that are not moved since last frame to save depth prepass requirement for camera motion.
-            filteringSettings.forceAllMotionVectorObjects = forceAllMotionVectorObjects;
+            filteringSettings.forceAllMotionVectorObjects = drawAllObjects;
             var renderStateBlock = new RenderStateBlock(RenderStateMask.Nothing);
 
             RenderingUtils.CreateRendererListWithRenderStateBlock(renderGraph, ref cullResults, objectMotionDrawingSettings, filteringSettings, renderStateBlock, ref passData.objMotionRendererList);
@@ -144,6 +165,12 @@ namespace UnityEngine.Rendering.Universal
 
             // Setup camera motion material
             passData.xrMotionVector = m_XRMotionVectorMaterial;
+
+            // Setup the default XR valid depth flag
+            passData.hasValidXRDepth = false;
+            passData.requiresSubsampleDepth = false;
+            passData.subsampleDepthKeyword = m_SubsampleDepthKeyword;
+            passData.cameraData = cameraData;
         }
 
         /// <summary>
@@ -205,12 +232,32 @@ namespace UnityEngine.Rendering.Universal
             s_lastColorFormat = importInfo.format;
             s_lastWidth = importInfo.width;
             s_lastHeight = importInfo.height;
+            s_lastEyeWidth = cameraData.xr.renderTargetDesc.width;
+            s_lastEyeHeight = cameraData.xr.renderTargetDesc.height;
+            s_lastCopyDepth = cameraData.xr.copyDepth;
             s_lastPrevViewValid = cameraData.xr.GetPrevViewValid(0);
-            if (!s_stateLogged)
+        }
+
+        private static Vector4 GetScaleBias(RTHandle xrDepthSrc, UniversalCameraData cameraData)
+        {
+            bool yFlip = cameraData.IsHandleYFlipped(xrDepthSrc);
+
+            Vector2 viewportScale = Vector2.one;
+
+            if (cameraData.xr.IsXRTarget(xrDepthSrc))
             {
-                s_stateLogged = true;
-                Debug.Log(DescribeState());
+                // xrViewport is in pixel coordinates
+                var xrViewport = cameraData.xr.GetViewport();
+                viewportScale.x = xrViewport.width / cameraData.xr.renderTargetDesc.width;
+                viewportScale.y = xrViewport.height / cameraData.xr.renderTargetDesc.height;
             }
+            else if (xrDepthSrc.useScaling)
+            {
+                viewportScale.x = xrDepthSrc.rtHandleProperties.rtHandleScale.x;
+                viewportScale.y = xrDepthSrc.rtHandleProperties.rtHandleScale.y;
+            }
+
+            return yFlip ? new Vector4(viewportScale.x, -viewportScale.y, 0, viewportScale.y) : new Vector4(viewportScale.x, viewportScale.y, 0, 0);
         }
 
 #region Recording
@@ -218,6 +265,7 @@ namespace UnityEngine.Rendering.Universal
         {
             UniversalRenderingData renderingData = frameData.Get<UniversalRenderingData>();
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+            UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
 
             // XR should be enabled and single pass should be enabled.
             if (!cameraData.xr.enabled || !cameraData.xr.singlePassEnabled)
@@ -249,8 +297,14 @@ namespace UnityEngine.Rendering.Universal
                 builder.SetRenderAttachment(xrMotionVectorColor, 0, AccessFlags.Write);
                 builder.SetRenderAttachmentDepth(xrMotionVectorDepth, AccessFlags.Write);
 
+                // Logic to detect if we already has valid XR depth data in the eye texture depth attachment
+                bool hasValidXRDepth = cameraData.xr.copyDepth && useEyeDepthCopy;
+
+                // In case we don't have valid depth, setup the renderer list to draw both static objects and moving objects to populate color+depth at the same time.
+                bool drawAllObjects = !hasValidXRDepth || forceAllMotionVectorObjects;
+
                 // Setup RendererList
-                InitObjectMotionRendererLists(ref passData, ref renderingData.cullResults, renderGraph, cameraData.camera);
+                InitObjectMotionRendererLists(ref passData, ref renderingData.cullResults, renderGraph, cameraData.camera, drawAllObjects);
                 builder.UseRendererList(passData.objMotionRendererList);
 
                 // Allow setting up global matrix array
@@ -258,29 +312,73 @@ namespace UnityEngine.Rendering.Universal
                 // Setup rest of the passData
                 InitPassData(ref passData, cameraData);
 
+                // Setup the relevant passData fields
+                if (hasValidXRDepth)
+                {
+                    // backBufferDepth(eyeTexture depth) has valid data to read from
+                    builder.UseTexture(resourceData.backBufferDepth, AccessFlags.Read);
+                    passData.xrDepthSrc = resourceData.backBufferDepth;
+                    passData.hasValidXRDepth = true;
+
+                    // Subsample Depth if the motion vector render target is smaller than the color render target
+                    passData.requiresSubsampleDepth = cameraData.xr.motionVectorRenderTargetDesc.width < cameraData.xr.renderTargetDesc.width;
+                }
+
+                s_lastEyeDepthCopied = passData.hasValidXRDepth;
+                s_lastSubsampleDepth = passData.requiresSubsampleDepth;
+                if (!s_stateLogged)
+                {
+                    s_stateLogged = true;
+                    Debug.Log(DescribeState());
+                }
+
+                passData.ndcModifier = m_XRSpaceWarpRightHandedNDC ? -1.0f : 1.0f;
+                if (invertSpaceWarpNDCModifier)
+                    passData.ndcModifier = -passData.ndcModifier;
+                passData.drawCameraMotionFill = cameraMotionFill;
+
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
-                    // Setup camera stereo buffer
-                    context.cmd.SetGlobalMatrixArray(ShaderPropertyId.previousViewProjectionNoJitterStereo, data.previousViewProjectionStereo);
-                    context.cmd.SetGlobalMatrixArray(ShaderPropertyId.viewProjectionNoJitterStereo, data.viewProjectionStereo);
+                    if (data.hasValidXRDepth)
+                    {
+                        context.cmd.SetGlobalTexture(k_XRDepthTextureNameID, data.xrDepthSrc, RenderTextureSubElement.Depth);
+                        context.cmd.SetGlobalVector(k_XRDepthTextureScaleBiasNameID, GetScaleBias(data.xrDepthSrc, data.cameraData));
+                    }
 
-                    // SpaceWarp is only available on Vulkan, so these values are always true. This is to support 2 versions of spacewarp
-                    // One expects OpenGL NDC space motion vectors, the other expects Vulkan NDC space
-                    float ndcModifier = m_XRSpaceWarpRightHandedNDC ? -1.0f : 1.0f;
-                    if (invertSpaceWarpNDCModifier)
-                        ndcModifier = -ndcModifier;
-                    context.cmd.SetGlobalFloat(k_SpaceWarpNDCModifier, ndcModifier);
-
-                    // Object Motion for both static and dynamic objects, fill stencil for mv filled pixels.
-                    context.cmd.DrawRendererList(passData.objMotionRendererList);
-
-                    // Fill mv texturew with camera motion for pixels that don't have mv stencil bit.
-                    if (cameraMotionFill)
-                        context.cmd.DrawProcedural(Matrix4x4.identity, data.xrMotionVector, 0, MeshTopology.Triangles, 3, 1);
+                    ExecutePass(context.cmd, data);
                 });
             }
         }
 #endregion
+
+        private static void ExecutePass(RasterCommandBuffer cmd, PassData data)
+        {
+            // Setup camera stereo buffer
+            cmd.SetGlobalMatrixArray(ShaderPropertyId.previousViewProjectionNoJitterStereo, data.previousViewProjectionStereo);
+            cmd.SetGlobalMatrixArray(ShaderPropertyId.viewProjectionNoJitterStereo, data.viewProjectionStereo);
+
+            // SpaceWarp is only available on Vulkan, so these values are always true. This is to support 2 versions of spacewarp
+            // One expects OpenGL NDC space motion vectors, the other expects Vulkan NDC space
+            cmd.SetGlobalFloat(k_SpaceWarpNDCModifier, data.ndcModifier);
+
+            // If we have valid depth data, copy the data to the motionvector depth to avoid rasterizing the static objects
+            if (data.hasValidXRDepth)
+            {
+                if (data.requiresSubsampleDepth)
+                    data.xrMotionVector.EnableKeyword(data.subsampleDepthKeyword);
+                else
+                    data.xrMotionVector.DisableKeyword(data.subsampleDepthKeyword);
+
+                cmd.DrawProcedural(Matrix4x4.identity, data.xrMotionVector, k_DepthCopyShaderPass, MeshTopology.Triangles, 3, 1);
+            }
+
+            // Object Motion, fill stencil for mv filled pixels.
+            cmd.DrawRendererList(data.objMotionRendererList);
+
+            // Fill mv texture with camera motion for pixels that don't have mv stencil bit.
+            if (!data.hasValidXRDepth && data.drawCameraMotionFill)
+                cmd.DrawProcedural(Matrix4x4.identity, data.xrMotionVector, k_CameraMotionShaderPass, MeshTopology.Triangles, 3, 1);
+        }
 
         private void ResetMotionData()
         {
