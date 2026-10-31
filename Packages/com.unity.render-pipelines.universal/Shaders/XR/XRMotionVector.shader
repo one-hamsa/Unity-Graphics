@@ -110,7 +110,8 @@ Shader "Hidden/Universal Render Pipeline/XR/XRMotionVector"
             ColorMask RGBA
 
             HLSLPROGRAM
-            #pragma target 3.5
+            // Gather for the subsampled depth copy
+            #pragma target 4.5
             #pragma multi_compile_fragment _ _SUBSAMPLE_DEPTH
 
             #pragma vertex Vert
