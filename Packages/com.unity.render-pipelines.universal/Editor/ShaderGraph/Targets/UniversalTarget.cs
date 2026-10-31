@@ -1223,6 +1223,12 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
             result.defines.Add(CoreKeywordDescriptors.XRMotionVectors, 1);
 
+            // Transparent surfaces clip at alpha 0.5 in this pass (MotionVectorPass.hlsl)
+            if (target.allowMaterialOverride)
+                result.keywords.Add(CoreKeywordDescriptors.SurfaceTypeTransparent);
+            else if (target.surfaceType == SurfaceType.Transparent)
+                result.defines.Add(CoreKeywordDescriptors.SurfaceTypeTransparent, 1);
+
             AddAlphaClipControlToPass(ref result, target);
             AddLODCrossFadeControlToPass(ref result, target);
 

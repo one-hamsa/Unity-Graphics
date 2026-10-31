@@ -196,6 +196,9 @@ float4 frag(
 
 #if defined(_ALPHATEST_ON)
     clip(surfaceDescription.Alpha - surfaceDescription.AlphaClipThreshold);
+#elif defined(APPLICATION_SPACE_WARP_MOTION) && defined(_SURFACE_TYPE_TRANSPARENT)
+    // SpaceWarp: transparent surfaces write motion vectors and depth only where mostly opaque
+    clip(surfaceDescription.Alpha - 0.5);
 #endif
 
 #if defined(LOD_FADE_CROSSFADE) && USE_UNITY_CROSSFADE
