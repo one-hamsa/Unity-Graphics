@@ -232,7 +232,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             bool isRenderToBackBufferTarget = !cameraData.isSceneViewCamera;
 #if ENABLE_VR && ENABLE_XR_MODULE
             if (cameraData.xr.enabled)
-                isRenderToBackBufferTarget = new RenderTargetIdentifier(destination.nameID, 0, CubemapFace.Unknown, -1) == new RenderTargetIdentifier(cameraData.xr.renderTarget, 0, CubemapFace.Unknown, -1);
+                isRenderToBackBufferTarget = cameraData.xr.IsXRTarget(destination);
 #endif
             var pixelRect = data.useFullScreenViewport ? new Rect(0f, 0f, Screen.width, Screen.height) : cameraData.pixelRect;
 #if URP_COMPATIBILITY_MODE
