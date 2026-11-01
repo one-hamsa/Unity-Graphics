@@ -33,16 +33,17 @@ namespace UnityEngine.Rendering.Universal
         // When true, objects that did not move are drawn on top of the copied eye depth as well.
         // Without eye depth every object is always drawn.
         public static bool forceAllMotionVectorObjects = false;
-        // Negates the y-sign convention passed to the motion vector shaders.
-        public static bool invertSpaceWarpNDCModifier = false;
         // Without eye depth only: when false, pixels without an object motion vector keep the cleared
         // zero velocity instead of the fullscreen camera-motion fill. The fill is drawn at the far plane.
         public static bool cameraMotionFill = true;
-        // When true, the previous view-projection comes from the XR runtime's previous view
-        // matrix (like the pre-6.3 Oculus fork) instead of this pass's own copy of last
-        // frame's camera view. The two differ by app-space (rig) motion, which the runtime
-        // also applies through appSpaceDeltaPose.
-        public static bool useXRPrevViewMatrix = false;
+        // When true, the pass renders into the motion vector target through the eye viewport
+        // (XRSettings.renderViewportScale, dynamic resolution) scaled to the target size, so the
+        // motion vector image occupies the same sub-rect as the eye color. When false the pass
+        // always covers the whole motion vector target.
+        public static bool applyEyeViewportScale = false;
+        // When false, the pass is not flagged MultiviewRenderRegionsCompatible, so the OpenXR
+        // Multiview Render Regions optimization leaves it alone.
+        public static bool multiviewRenderRegionsCompatible = true;
 
         // Last observed pass state, for diagnostics (see DescribeState).
         static bool s_lastPrevViewValid;
@@ -51,17 +52,27 @@ namespace UnityEngine.Rendering.Universal
         static bool s_lastRightHandedNDC;
         static int s_lastWidth, s_lastHeight;
         static int s_lastEyeWidth, s_lastEyeHeight;
+        static Rect s_lastEyeViewport;
+        static Rect s_lastViewport;
         static bool s_lastCopyDepth;
         static bool s_lastEyeDepthCopied;
         static bool s_lastSubsampleDepth;
         static bool s_stateLogged;
 
+        public static int lastTargetWidth => s_lastWidth;
+        public static int lastTargetHeight => s_lastHeight;
+        public static Rect lastViewport => s_lastViewport;
+        public static Rect lastEyeViewport => s_lastEyeViewport;
+        public static bool lastEyeDepthCopied => s_lastEyeDepthCopied;
+
         public static string DescribeState()
         {
             return $"XRDepthMotionPass: target {s_lastWidth}x{s_lastHeight} color={s_lastColorFormat} depth={s_lastDepthStencilFormat} " +
-                   $"eye {s_lastEyeWidth}x{s_lastEyeHeight} xrCopyDepth={s_lastCopyDepth} eyeDepthCopied={s_lastEyeDepthCopied} subsampleDepth={s_lastSubsampleDepth} " +
+                   $"eye {s_lastEyeWidth}x{s_lastEyeHeight} eyeViewport={s_lastEyeViewport} mvViewport={s_lastViewport} " +
+                   $"xrCopyDepth={s_lastCopyDepth} eyeDepthCopied={s_lastEyeDepthCopied} subsampleDepth={s_lastSubsampleDepth} " +
                    $"rightHandedNDC={s_lastRightHandedNDC} prevViewValid={s_lastPrevViewValid} " +
-                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} invertNDC={invertSpaceWarpNDCModifier} cameraFill={cameraMotionFill} useXRPrevView={useXRPrevViewMatrix}";
+                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} cameraFill={cameraMotionFill} " +
+                   $"applyEyeViewportScale={applyEyeViewportScale} mvrrCompatible={multiviewRenderRegionsCompatible}";
         }
 
         /// <summary>
@@ -97,6 +108,8 @@ namespace UnityEngine.Rendering.Universal
             internal LocalKeyword subsampleDepthKeyword;
             internal float ndcModifier;
             internal bool drawCameraMotionFill;
+            internal bool applyViewport;
+            internal Rect viewport;
         }
 
         ///  View projection data
@@ -292,7 +305,8 @@ namespace UnityEngine.Rendering.Universal
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("XR Motion Pass", out var passData, base.profilingSampler))
             {
                 builder.EnableFoveatedRasterization(cameraData.xr.supportsFoveatedRendering);
-                builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.MultiviewRenderRegionsCompatible);
+                if (multiviewRenderRegionsCompatible)
+                    builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.MultiviewRenderRegionsCompatible);
                 // Setup Color and Depth attachments
                 builder.SetRenderAttachment(xrMotionVectorColor, 0, AccessFlags.Write);
                 builder.SetRenderAttachmentDepth(xrMotionVectorDepth, AccessFlags.Write);
@@ -324,8 +338,21 @@ namespace UnityEngine.Rendering.Universal
                     passData.requiresSubsampleDepth = cameraData.xr.motionVectorRenderTargetDesc.width < cameraData.xr.renderTargetDesc.width;
                 }
 
+                // Eye viewport (pixels of the eye texture) mapped onto the motion vector target.
+                var eyeViewport = cameraData.xr.GetViewport();
+                var eyeDesc = cameraData.xr.renderTargetDesc;
+                var mvDesc = cameraData.xr.motionVectorRenderTargetDesc;
+                float scaleX = (float)mvDesc.width / eyeDesc.width;
+                float scaleY = (float)mvDesc.height / eyeDesc.height;
+                passData.applyViewport = applyEyeViewportScale;
+                passData.viewport = applyEyeViewportScale
+                    ? new Rect(eyeViewport.x * scaleX, eyeViewport.y * scaleY, eyeViewport.width * scaleX, eyeViewport.height * scaleY)
+                    : new Rect(0, 0, mvDesc.width, mvDesc.height);
+
                 s_lastEyeDepthCopied = passData.hasValidXRDepth;
                 s_lastSubsampleDepth = passData.requiresSubsampleDepth;
+                s_lastEyeViewport = eyeViewport;
+                s_lastViewport = passData.viewport;
                 if (!s_stateLogged)
                 {
                     s_stateLogged = true;
@@ -333,12 +360,13 @@ namespace UnityEngine.Rendering.Universal
                 }
 
                 passData.ndcModifier = m_XRSpaceWarpRightHandedNDC ? -1.0f : 1.0f;
-                if (invertSpaceWarpNDCModifier)
-                    passData.ndcModifier = -passData.ndcModifier;
                 passData.drawCameraMotionFill = cameraMotionFill;
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
+                    if (data.applyViewport)
+                        context.cmd.SetViewport(data.viewport);
+
                     if (data.hasValidXRDepth)
                     {
                         context.cmd.SetGlobalTexture(k_XRDepthTextureNameID, data.xrDepthSrc, RenderTextureSubElement.Depth);
@@ -409,16 +437,8 @@ namespace UnityEngine.Rendering.Universal
                     var gpuVP1 = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrixNoJitter(1), renderIntoTexture: false) * cameraData.GetViewMatrix(1);
                     var xr = cameraData.xr;
                     var viewStartIndex = xr.viewCount * xr.multipassId;
-                    if (useXRPrevViewMatrix && xr.GetPrevViewValid(0) && xr.GetPrevViewValid(1))
-                    {
-                        m_PreviousViewProjection[viewStartIndex] = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrixNoJitter(0), renderIntoTexture: false) * xr.GetPrevViewMatrix(0);
-                        m_PreviousViewProjection[viewStartIndex + 1] = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrixNoJitter(1), renderIntoTexture: false) * xr.GetPrevViewMatrix(1);
-                    }
-                    else
-                    {
-                        m_PreviousViewProjection[viewStartIndex] = m_ViewProjection[viewStartIndex];
-                        m_PreviousViewProjection[viewStartIndex + 1] = m_ViewProjection[viewStartIndex + 1];
-                    }
+                    m_PreviousViewProjection[viewStartIndex] = m_ViewProjection[viewStartIndex];
+                    m_PreviousViewProjection[viewStartIndex + 1] = m_ViewProjection[viewStartIndex + 1];
                     m_ViewProjection[viewStartIndex] = gpuVP0;
                     m_ViewProjection[viewStartIndex + 1] = gpuVP1;
                 }
