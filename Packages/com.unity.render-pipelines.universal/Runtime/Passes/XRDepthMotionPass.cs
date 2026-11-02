@@ -36,14 +36,6 @@ namespace UnityEngine.Rendering.Universal
         // Without eye depth only: when false, pixels without an object motion vector keep the cleared
         // zero velocity instead of the fullscreen camera-motion fill. The fill is drawn at the far plane.
         public static bool cameraMotionFill = true;
-        // When true, the pass renders into the motion vector target through the eye viewport
-        // (XRSettings.renderViewportScale, dynamic resolution) scaled to the target size, so the
-        // motion vector image occupies the same sub-rect as the eye color. When false the pass
-        // always covers the whole motion vector target.
-        public static bool applyEyeViewportScale = false;
-        // When false, the pass is not flagged MultiviewRenderRegionsCompatible, so the OpenXR
-        // Multiview Render Regions optimization leaves it alone.
-        public static bool multiviewRenderRegionsCompatible = true;
 
         // Last observed pass state, for diagnostics (see DescribeState).
         static bool s_lastPrevViewValid;
@@ -52,8 +44,6 @@ namespace UnityEngine.Rendering.Universal
         static bool s_lastRightHandedNDC;
         static int s_lastWidth, s_lastHeight;
         static int s_lastEyeWidth, s_lastEyeHeight;
-        static Rect s_lastEyeViewport;
-        static Rect s_lastViewport;
         static bool s_lastCopyDepth;
         static bool s_lastEyeDepthCopied;
         static bool s_lastSubsampleDepth;
@@ -61,18 +51,15 @@ namespace UnityEngine.Rendering.Universal
 
         public static int lastTargetWidth => s_lastWidth;
         public static int lastTargetHeight => s_lastHeight;
-        public static Rect lastViewport => s_lastViewport;
-        public static Rect lastEyeViewport => s_lastEyeViewport;
         public static bool lastEyeDepthCopied => s_lastEyeDepthCopied;
 
         public static string DescribeState()
         {
             return $"XRDepthMotionPass: target {s_lastWidth}x{s_lastHeight} color={s_lastColorFormat} depth={s_lastDepthStencilFormat} " +
-                   $"eye {s_lastEyeWidth}x{s_lastEyeHeight} eyeViewport={s_lastEyeViewport} mvViewport={s_lastViewport} " +
+                   $"eye {s_lastEyeWidth}x{s_lastEyeHeight} " +
                    $"xrCopyDepth={s_lastCopyDepth} eyeDepthCopied={s_lastEyeDepthCopied} subsampleDepth={s_lastSubsampleDepth} " +
                    $"rightHandedNDC={s_lastRightHandedNDC} prevViewValid={s_lastPrevViewValid} " +
-                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} cameraFill={cameraMotionFill} " +
-                   $"applyEyeViewportScale={applyEyeViewportScale} mvrrCompatible={multiviewRenderRegionsCompatible}";
+                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} cameraFill={cameraMotionFill}";
         }
 
         /// <summary>
@@ -108,8 +95,6 @@ namespace UnityEngine.Rendering.Universal
             internal LocalKeyword subsampleDepthKeyword;
             internal float ndcModifier;
             internal bool drawCameraMotionFill;
-            internal bool applyViewport;
-            internal Rect viewport;
         }
 
         ///  View projection data
@@ -305,8 +290,7 @@ namespace UnityEngine.Rendering.Universal
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("XR Motion Pass", out var passData, base.profilingSampler))
             {
                 builder.EnableFoveatedRasterization(cameraData.xr.supportsFoveatedRendering);
-                if (multiviewRenderRegionsCompatible)
-                    builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.MultiviewRenderRegionsCompatible);
+                builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.MultiviewRenderRegionsCompatible);
                 // Setup Color and Depth attachments
                 builder.SetRenderAttachment(xrMotionVectorColor, 0, AccessFlags.Write);
                 builder.SetRenderAttachmentDepth(xrMotionVectorDepth, AccessFlags.Write);
@@ -338,21 +322,8 @@ namespace UnityEngine.Rendering.Universal
                     passData.requiresSubsampleDepth = cameraData.xr.motionVectorRenderTargetDesc.width < cameraData.xr.renderTargetDesc.width;
                 }
 
-                // Eye viewport (pixels of the eye texture) mapped onto the motion vector target.
-                var eyeViewport = cameraData.xr.GetViewport();
-                var eyeDesc = cameraData.xr.renderTargetDesc;
-                var mvDesc = cameraData.xr.motionVectorRenderTargetDesc;
-                float scaleX = (float)mvDesc.width / eyeDesc.width;
-                float scaleY = (float)mvDesc.height / eyeDesc.height;
-                passData.applyViewport = applyEyeViewportScale;
-                passData.viewport = applyEyeViewportScale
-                    ? new Rect(eyeViewport.x * scaleX, eyeViewport.y * scaleY, eyeViewport.width * scaleX, eyeViewport.height * scaleY)
-                    : new Rect(0, 0, mvDesc.width, mvDesc.height);
-
                 s_lastEyeDepthCopied = passData.hasValidXRDepth;
                 s_lastSubsampleDepth = passData.requiresSubsampleDepth;
-                s_lastEyeViewport = eyeViewport;
-                s_lastViewport = passData.viewport;
                 if (!s_stateLogged)
                 {
                     s_stateLogged = true;
@@ -364,9 +335,6 @@ namespace UnityEngine.Rendering.Universal
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
-                    if (data.applyViewport)
-                        context.cmd.SetViewport(data.viewport);
-
                     if (data.hasValidXRDepth)
                     {
                         context.cmd.SetGlobalTexture(k_XRDepthTextureNameID, data.xrDepthSrc, RenderTextureSubElement.Depth);
