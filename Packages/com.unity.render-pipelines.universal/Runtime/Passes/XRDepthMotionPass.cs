@@ -290,7 +290,8 @@ namespace UnityEngine.Rendering.Universal
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("XR Motion Pass", out var passData, base.profilingSampler))
             {
                 builder.EnableFoveatedRasterization(cameraData.xr.supportsFoveatedRendering);
-                builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.MultiviewRenderRegionsCompatible);
+                // Not flagged MultiviewRenderRegionsCompatible, so Multiview Render Regions leaves this
+                // pass alone: its per-view render areas offset the motion vectors under dynamic resolution.
                 // Setup Color and Depth attachments
                 builder.SetRenderAttachment(xrMotionVectorColor, 0, AccessFlags.Write);
                 builder.SetRenderAttachmentDepth(xrMotionVectorDepth, AccessFlags.Write);
