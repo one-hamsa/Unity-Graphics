@@ -8,7 +8,7 @@ namespace UnityEngine.Rendering.Universal
     /// <summary>
     /// Render all objects that have a 'XRMotionVectors' pass into the given depth buffer and motionvec buffer.
     /// When the eye texture depth is valid (XR depth submission), it is copied into the motion vector depth together
-    /// with per-pixel camera motion, and only objects that moved are drawn on top.
+    /// with per-pixel camera motion, and the objects are drawn on top without the static opaque rendering layer.
     /// </summary>
     public class XRDepthMotionPass : ScriptableRenderPass
     {
@@ -36,6 +36,14 @@ namespace UnityEngine.Rendering.Universal
         // Without eye depth only: when false, pixels without an object motion vector keep the cleared
         // zero velocity instead of the fullscreen camera-motion fill. The fill is drawn at the far plane.
         public static bool cameraMotionFill = true;
+        // Rendering layer of static opaque renderers that cast no shadows. They carry it in place of the
+        // Default layer, and the eye depth copy gives them their depth and camera motion.
+        public const int k_StaticOpaqueRenderingLayer = 9;
+        // When false, renderers on k_StaticOpaqueRenderingLayer are left out of the object draws while the
+        // eye depth is copied. Without eye depth, and with forceAllMotionVectorObjects, they are always drawn.
+        public static bool drawStaticOpaqueRenderers = false;
+        // Rendering layers of the object draws while the eye depth is copied.
+        public static uint eyeDepthCopyRenderingLayerMask => drawStaticOpaqueRenderers ? uint.MaxValue : ~(1u << k_StaticOpaqueRenderingLayer);
 
         // Last observed pass state, for diagnostics (see DescribeState).
         static bool s_lastPrevViewValid;
@@ -59,7 +67,8 @@ namespace UnityEngine.Rendering.Universal
                    $"eye {s_lastEyeWidth}x{s_lastEyeHeight} " +
                    $"xrCopyDepth={s_lastCopyDepth} eyeDepthCopied={s_lastEyeDepthCopied} subsampleDepth={s_lastSubsampleDepth} " +
                    $"rightHandedNDC={s_lastRightHandedNDC} prevViewValid={s_lastPrevViewValid} " +
-                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} cameraFill={cameraMotionFill}";
+                   $"useEyeDepthCopy={useEyeDepthCopy} forceAll={forceAllMotionVectorObjects} cameraFill={cameraMotionFill} " +
+                   $"drawStaticOpaque={drawStaticOpaqueRenderers}";
         }
 
         /// <summary>
@@ -132,6 +141,8 @@ namespace UnityEngine.Rendering.Universal
             var filteringSettings = new FilteringSettings(RenderQueueRange.all, camera.cullingMask);
             // Also render game objects that are not moved since last frame to save depth prepass requirement for camera motion.
             filteringSettings.forceAllMotionVectorObjects = drawAllObjects;
+            if (!drawAllObjects)
+                filteringSettings.renderingLayerMask = eyeDepthCopyRenderingLayerMask;
             var renderStateBlock = new RenderStateBlock(RenderStateMask.Nothing);
 
             RenderingUtils.CreateRendererListWithRenderStateBlock(renderGraph, ref cullResults, objectMotionDrawingSettings, filteringSettings, renderStateBlock, ref passData.objMotionRendererList);
